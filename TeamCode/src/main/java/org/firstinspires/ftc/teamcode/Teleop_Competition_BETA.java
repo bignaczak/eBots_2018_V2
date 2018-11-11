@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,10 +26,10 @@ public class Teleop_Competition_BETA extends LinearOpMode {
     //****************************************************************
     //  DEFINE CONSTANTS FOR THE ROBOT
     //  THESE ARE ALL POSITIONS ASSUMED THE ROBOT IS COMPLETELY FOLDED PRIOR TO START OF AUTON
-    final static int ARM_ANGLE_COLLECT_POSITION = 12000;  //TEST POSITIION
-    final static int ARM_ANGLE_TRAVEL_POSITION = 5600;
-    final static int ARM_ANGLE_SCORE_POSITION = 2000;    //MUST VERIFY
-    final static int ARM_ANGLE_DUMP_POSITION = 11000;
+    final static int ARM_ANGLE_COLLECT_POSITION = -11750;  //TEST POSITIION
+    final static int ARM_ANGLE_TRAVEL_POSITION = -5600;
+    final static int ARM_ANGLE_SCORE_POSITION = -1000;    //MUST VERIFY
+    final static int ARM_ANGLE_DUMP_POSITION = -11000;
 
     //These are constants used to define counts per revolution of NEVEREST motors with encoders
     static final int NEVEREST_60_CPR = 1680;
@@ -47,7 +48,7 @@ public class Teleop_Competition_BETA extends LinearOpMode {
     final static int LATCH_RISEUP_POSITION = 1540;
 
     //MOTOR PROTECTION ENCODER
-    final static int ARM_ANGLE_LIMIT = 12500;
+    final static int ARM_ANGLE_LIMIT = -11750;
     final static int ARM_EXTENSION_LIMIT = -57800;
     final static int LATCH_LIMIT = 14000;
 
@@ -195,6 +196,8 @@ public class Teleop_Competition_BETA extends LinearOpMode {
         boolean speedBoostOn = false;               //Maximize motor drive speeds if pressed
         double[] driveValues = new double[4];
         double maxValue;
+        long autoMoveStart = System.nanoTime()/1000000;
+        long autoMoveTimeLimit = 10000;
 
         //Initialize motors for manipulator
         armAngleMotor = hardwareMap.get(DcMotor.class, "armAngleMotor");
@@ -211,6 +214,7 @@ public class Teleop_Competition_BETA extends LinearOpMode {
         latchMotor = hardwareMap.get(DcMotor.class, "latchMotor");
         latchMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         latchMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        latchMotor.setDirection(DcMotor.Direction.REVERSE);
 
         int countsPerRevolution = NEVEREST_20_CPR;  //Output counts per revolution of Output Shaft (cpr): 1120
         double degreesToEncoderCounts = countsPerRevolution/360.0;
@@ -220,7 +224,7 @@ public class Teleop_Competition_BETA extends LinearOpMode {
         double leftTrigger;
         double latchDrive;
         double armAngleDrive;
-        final double motorThreshold=0.25;
+        final double motorThreshold=0.15;
         boolean encoderSafetyOverride = false;
         double spinScaleFactor = 0.3;
 
@@ -247,9 +251,19 @@ public class Teleop_Competition_BETA extends LinearOpMode {
 
             if(!armAngleMotor.isBusy()){
                 if (armAngleMotor.getMode() != DcMotor.RunMode.RUN_WITHOUT_ENCODER){
+                    armAngleMotor.setPower(0);
                     armAngleMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                 }
+            }else{
+                //Sometimes the armAngle motor gets stuck in the Busy mode
+                //So if it is busy but has taken too much time, reset the mode
+                if((System.nanoTime() / 1000000) > (autoMoveStart+autoMoveTimeLimit)){
+                    armAngleMotor.setPower(0);
+                    armAngleMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+                }
             }
+
 
             //GAMEPAD1 INPUTS
             //----------------------------------------
@@ -331,18 +345,19 @@ public class Teleop_Competition_BETA extends LinearOpMode {
             armAngleDrive = gamepad2.right_stick_y;
 
             //Note that the armAngleMotor is setup so
-            // Extending to collect counts POSITIVE encoder clicks
-            // Retracting into body counts NEGATIVE encoder clicks
+            // Extending to collect counts NEGATIVE encoder clicks
+            // Retracting into body counts POSITIVE encoder clicks
             // If the joystick is moved more than threshold
             // if trying to extend, make sure that the position is within encoder safety limit
             // This teleOp is assumed to run immediately after Auton
             // So the zero position must be offset a bit
-            if (armAngleDrive > motorThreshold & armAngleMotor.getCurrentPosition() < armAngleEffectiveLimit
-                    | armAngleDrive > motorThreshold & encoderSafetyOverride){
+            if (armAngleDrive < -motorThreshold & armAngleMotor.getCurrentPosition() > armAngleEffectiveLimit
+                    | armAngleDrive < -motorThreshold & encoderSafetyOverride){
+                    //Pushing up on the stick gives a negative value
                     //No need to adjust armAngleDrive
                     //It is equal to the value bounded by threshold and 1
-            } else if (armAngleDrive < -motorThreshold & armAngleMotor.getCurrentPosition() > armAngleEffectiveZeroPoint
-                    | armAngleDrive < -motorThreshold & encoderSafetyOverride){
+            } else if (armAngleDrive > motorThreshold & armAngleMotor.getCurrentPosition() < armAngleEffectiveZeroPoint
+                    | armAngleDrive > motorThreshold & encoderSafetyOverride){
                 //if trying to retract, make sure that the position is above zero
                     //No need to adjust armAngleDrive
                     //It is equal to the value bounded by -threshold and -1
@@ -357,10 +372,13 @@ public class Teleop_Competition_BETA extends LinearOpMode {
 
 
             //Control armExtension with dpad up and down
-            if ((gamepad2.dpad_up & armExtensionMotor.getCurrentPosition() < armExtensionEffectiveLimit)
+            // Note that the armExtension encoder counts DECREASE with extension
+            //                        and encoder counts INCREASE with retraction
+            // This is important for setting the encoder safety limits
+            if ((gamepad2.dpad_up & armExtensionMotor.getCurrentPosition() > armExtensionEffectiveLimit)
                     | (gamepad2.dpad_up & encoderSafetyOverride)) {
                 armExtensionMotor.setPower(-1);
-            } else if ((gamepad2.dpad_down & armExtensionMotor.getCurrentPosition() > armExtensionEffectiveZeroPoint)
+            } else if ((gamepad2.dpad_down & armExtensionMotor.getCurrentPosition() < armExtensionEffectiveZeroPoint)
                     | (gamepad2.dpad_down & encoderSafetyOverride)) {
                 armExtensionMotor.setPower(1);
             } else {
@@ -383,7 +401,7 @@ public class Teleop_Competition_BETA extends LinearOpMode {
             //Allow the armAngle and armExtension motor encoders to be reset in case auton
             // doesn't fully complete
             // Arm should be down and fully extended when called
-            if(gamepad2.left_bumper & gamepad2.right_bumper & gamepad2.right_stick_button){
+            if(gamepad2.left_bumper & gamepad2.right_bumper & gamepad2.x){
                 zeroArmEncodersOnTheFly(ARM_ANGLE_COLLECT_POSITION, ARM_EXTENSION_COLLECTION_POSITION);
             }
 
@@ -402,6 +420,9 @@ public class Teleop_Competition_BETA extends LinearOpMode {
                 armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 armAngleMotor.setTargetPosition(armAngleEffectiveTravelPositiion);
                 armAngleMotor.setPower(1);
+                //TODO:  Make timeout a function of starting position
+                autoMoveTimeLimit = 3500;  //only allow 3.5 seconds for move
+                autoMoveStart = System.nanoTime() / 1000000;  //Current time in milliseconds
             }
 
             //Set armAngle to score position
@@ -411,6 +432,10 @@ public class Teleop_Competition_BETA extends LinearOpMode {
                 armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 armAngleMotor.setTargetPosition(armAngleEffectiveScorePosition);
                 armAngleMotor.setPower(1);
+                //TODO:  Make timeout a function of starting position
+                autoMoveTimeLimit = 10000;  //only allow 10 seconds for move
+                autoMoveStart = System.nanoTime() / 1000000;  //Current time in milliseconds
+
             }
 
             //Set armAngle to collect position
@@ -420,17 +445,25 @@ public class Teleop_Competition_BETA extends LinearOpMode {
                 armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 armAngleMotor.setTargetPosition(armExtensionEffectiveLimit);
                 armAngleMotor.setPower(1);
+                //TODO:  Make timeout a function of starting position
+                autoMoveTimeLimit = 7000;  //only allow 7 seconds for move
+                autoMoveStart = System.nanoTime() / 1000000;  //Current time in milliseconds
+
             }
             //*************************************************
+            // Note that the latch encoder counts INCREASES with extension (i.e. lowers robot)
+            //                        and encoder counts DECREASES with retraction  (i.e. robot raises)
+            // This is important for setting the encoder safety limits
 
             latchDrive = gamepad2.left_stick_y;
 
             if (latchDrive > motorThreshold & latchMotor.getCurrentPosition() > latchEffectiveZeroPoint
                     | latchDrive > motorThreshold & encoderSafetyOverride){
-                    //No need to update signal for latchDrive
+                    //Note:  pushing up on the stick has been changed to raise the arm (lowers robot)
+                    //  This is changed from original behavior, motor direction has been reversed
             }else if(latchDrive < -motorThreshold & latchMotor.getCurrentPosition() < latchEffectiveLimit
                     | latchDrive < -motorThreshold & encoderSafetyOverride){
-                    //also no need t update
+                    //Note:  pushing down on the stick lowers the are (raises robot)
             } else {
                 latchDrive = 0;
             }
@@ -469,10 +502,22 @@ public class Teleop_Competition_BETA extends LinearOpMode {
             //telemetry.addData("driveX", driveX);
             //telemetry.addData("driveY", driveY);
             //telemetry.addData("spin", spin);
+            //telemetry.addData("encoder override", gamepad2.left_bumper);
+            //telemetry.addData("right bumper", gamepad2.right_bumper);
+            //telemetry.addData("right stick y", gamepad2.right_stick_y);
+            telemetry.addData("armAngle busy", armAngleMotor.isBusy());
+            telemetry.addData("armAngle mode", armAngleMotor.getMode());
+            telemetry.addData("run without encoders", DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
             telemetry.addData("armAngleMotor Position", armAngleMotor.getCurrentPosition());
             telemetry.addData("armExtensionMotor Position", armExtensionMotor.getCurrentPosition());
             telemetry.addData("latchMotor Position", latchMotor.getCurrentPosition());
             telemetry.addData("Status", "Running");
+            telemetry.addData("frontLeft Position", frontLeft.getCurrentPosition());
+            telemetry.addData("frontRight Position", frontRight.getCurrentPosition());
+            telemetry.addData("backLeft Position", backLeft.getCurrentPosition());
+            telemetry.addData("backRight Position", backRight.getCurrentPosition());
+
             telemetry.update();
         }
     }
