@@ -26,7 +26,8 @@ public class Teleop_Competition_BETA extends LinearOpMode {
     //****************************************************************
     //  DEFINE CONSTANTS FOR THE ROBOT
     //  THESE ARE ALL POSITIONS ASSUMED THE ROBOT IS COMPLETELY FOLDED PRIOR TO START OF AUTON
-    final static int ARM_ANGLE_COLLECT_POSITION = -11750;  //TEST POSITIION
+    final static int ARM_ANGLE_COLLECT_POSITION = -11750;  //REAL POSITION
+    //final static int ARM_ANGLE_COLLECT_POSITION = -10000;  //TEST POSITION
     final static int ARM_ANGLE_TRAVEL_POSITION = -5600;
     final static int ARM_ANGLE_SCORE_POSITION = -1000;    //MUST VERIFY
     final static int ARM_ANGLE_DUMP_POSITION = -11000;
@@ -37,20 +38,21 @@ public class Teleop_Competition_BETA extends LinearOpMode {
     static final int NEVEREST_20_CPR = 560;
 
     //final int ARM_EXTENSION_COLLECTION_POSITION = 27800;
-    final static int ARM_EXTENSION_COLLECTION_POSITION = -57800;  //test position
+    final static int ARM_EXTENSION_COLLECTION_POSITION = -57500;  //test position
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27800;
 
     final static int LATCH_DEPLOY_POSITION = 13200;        //13900 is a little too high
     //13500 is a little high for our practice lander
-    final static int LATCH_DRIVE_POSITION = 5900;          //5900 is good, could be a little higher
-    final static int LATCH_ENGAGE_POSITION = 9892;
-    final static int LATCH_RISEUP_POSITION = 1540;
+    final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
+    final static int LATCH_ENGAGE_POSITION = -9892;
+    final static int LATCH_RISEUP_POSITION = -1540;
 
     //MOTOR PROTECTION ENCODER
-    final static int ARM_ANGLE_LIMIT = -11750;
-    final static int ARM_EXTENSION_LIMIT = -57800;
-    final static int LATCH_LIMIT = 14000;
+    final static int ARM_ANGLE_LIMIT = -11750;  //REAL POSITION
+    //final static int ARM_ANGLE_LIMIT = -10000;  //TEST POSITION
+    final static int ARM_EXTENSION_LIMIT = -57500;
+    final static int LATCH_LIMIT = -14000;
 
     final static String VUFORIA_KEY = "AdGgXjv/////AAABmSSQR7vFmE3cjN2PqTebidhZFI8eL1qz4JblkX3JPyyYFRNp/Su1RHcHvkTzJ1YjafcDYsT0l6b/2U/fEZObIq8Si3JYDie2PfMRfdbx1+U0supMRZFrkcdize8JSaxMeOdtholJ+hUZN+C4Ovo7Eiy/1sBrqihv+NGt1bd2/fXwvlIDJFm5lJHF6FCj9f4I7FtIAB0MuhdTSu4QwYB84m3Vkx9iibTUB3L2nLLtRYcbVpoiqvlxvZomUd2JMef+Ux6+3FA3cPKCicVfP2psbjZrxywoc8iYUAq0jtsEaxgFdYoaTR+TWwNtKwJS6kwCgBWThcIQ6yI1jWEdrJYYFmHXJG/Rf/Nw8twEVh8l/Z0M";
 
@@ -224,8 +226,11 @@ public class Teleop_Competition_BETA extends LinearOpMode {
         double leftTrigger;
         double latchDrive;
         double armAngleDrive;
+        double armExtensionDrive;
         final double motorThreshold=0.15;
         boolean encoderSafetyOverride = false;
+        final int encoderCountSafetyBuffer = 1000;
+        final double motorThrottleDownSpeed = 0.5;
         double spinScaleFactor = 0.3;
 
         zeroArmEncodersOnTheFly(ARM_ANGLE_TRAVEL_POSITION, ARM_EXTENSION_COLLECTION_POSITION);
@@ -261,6 +266,10 @@ public class Teleop_Competition_BETA extends LinearOpMode {
                     armAngleMotor.setPower(0);
                     armAngleMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
+                }
+                if (Math.abs(armAngleMotor.getCurrentPosition() - armAngleMotor.getTargetPosition()) < encoderCountSafetyBuffer){
+                    //If getting close to the target, turn down power
+                    armAngleMotor.setPower(motorThrottleDownSpeed);
                 }
             }
 
@@ -367,6 +376,15 @@ public class Teleop_Competition_BETA extends LinearOpMode {
             }
 
             if (!armAngleMotor.isBusy()) {
+                if(Math.abs(armAngleMotor.getCurrentPosition() - armAngleEffectiveLimit) < encoderCountSafetyBuffer
+                        | Math.abs(armAngleMotor.getCurrentPosition() - armAngleEffectiveZeroPoint) < encoderCountSafetyBuffer){
+                    //if close to one of the limits, reduce power to improve accuracy
+                    if (armAngleDrive <= -motorThrottleDownSpeed) {
+                        armAngleDrive = -motorThrottleDownSpeed;
+                    } else if (armAngleDrive >= motorThrottleDownSpeed){
+                        armAngleDrive = motorThrottleDownSpeed;
+                    }
+                }
                 armAngleMotor.setPower(armAngleDrive);
             }
 
@@ -377,14 +395,27 @@ public class Teleop_Competition_BETA extends LinearOpMode {
             // This is important for setting the encoder safety limits
             if ((gamepad2.dpad_up & armExtensionMotor.getCurrentPosition() > armExtensionEffectiveLimit)
                     | (gamepad2.dpad_up & encoderSafetyOverride)) {
-                armExtensionMotor.setPower(-1);
+                armExtensionDrive = -1;
+                //armExtensionMotor.setPower(-1);
             } else if ((gamepad2.dpad_down & armExtensionMotor.getCurrentPosition() < armExtensionEffectiveZeroPoint)
                     | (gamepad2.dpad_down & encoderSafetyOverride)) {
-                armExtensionMotor.setPower(1);
+                armExtensionDrive = 1;
+                //armExtensionMotor.setPower(1);
             } else {
-                armExtensionMotor.setPower(0);
+                armExtensionDrive = 0;
+                //armExtensionMotor.setPower(0);
             }
 
+            if(Math.abs(armExtensionMotor.getCurrentPosition() - armExtensionEffectiveLimit) < encoderCountSafetyBuffer
+                    | Math.abs(armExtensionMotor.getCurrentPosition() - armExtensionEffectiveZeroPoint) < encoderCountSafetyBuffer){
+                //if close to one of the limits, reduce power to improve accuracy
+                if (armExtensionDrive <= -motorThrottleDownSpeed) {
+                    armExtensionDrive = -motorThrottleDownSpeed;
+                } else if (armExtensionDrive >= motorThrottleDownSpeed){
+                    armExtensionDrive = motorThrottleDownSpeed;
+                }
+            }
+            armExtensionMotor.setPower(armExtensionDrive);
 
             //Get input for the collector motors
             rightTrigger = gamepad2.right_trigger;
@@ -456,14 +487,17 @@ public class Teleop_Competition_BETA extends LinearOpMode {
             // This is important for setting the encoder safety limits
 
             latchDrive = gamepad2.left_stick_y;
-
-            if (latchDrive > motorThreshold & latchMotor.getCurrentPosition() > latchEffectiveZeroPoint
+            //Note:  down in the y direction is POSITIVE signal
+            if (latchDrive > motorThreshold & latchMotor.getCurrentPosition() < latchEffectiveZeroPoint
                     | latchDrive > motorThreshold & encoderSafetyOverride){
-                    //Note:  pushing up on the stick has been changed to raise the arm (lowers robot)
-                    //  This is changed from original behavior, motor direction has been reversed
-            }else if(latchDrive < -motorThreshold & latchMotor.getCurrentPosition() < latchEffectiveLimit
-                    | latchDrive < -motorThreshold & encoderSafetyOverride){
                     //Note:  pushing down on the stick lowers the are (raises robot)
+                    //  This is changed from original behavior, motor direction has been reversed
+                    //  Pushing down causes encoder count to INCREASE
+
+            }else if(latchDrive < -motorThreshold & latchMotor.getCurrentPosition() > latchEffectiveLimit
+                    | latchDrive < -motorThreshold & encoderSafetyOverride){
+                    //Note:  pushing up on the stick has been changed to raise the arm (lowers robot)
+                    //  Pushing up causes the encoder count to DECREASE
             } else {
                 latchDrive = 0;
             }
@@ -483,17 +517,26 @@ public class Teleop_Competition_BETA extends LinearOpMode {
                 latchMotor.setPower(1);
                 while (latchMotor.isBusy()){
                     telemetry.addData("Status", "Engaging Latch");
+                    telemetry.addData("latchMotor Position", latchMotor.getCurrentPosition());
+                    telemetry.update();
+
                 }
                 //wait for latch to engage
                 latchMotor.setPower(0);
                 latchMotor.setTargetPosition(latchEffectiveRiseupPosition);
                 latchMotor.setPower(1);
                 while (latchMotor.isBusy()){
+                    telemetry.addData("latchMotor Position", latchMotor.getCurrentPosition());
                     telemetry.addData("Status", "Lifting");
+                    telemetry.update();
+
                     //wait for robot to be lifted
                 }
                 latchMotor.setPower(0);
+                telemetry.addData("latchMotor Position", latchMotor.getCurrentPosition());
                 telemetry.addData("Status", "Latching Complete!!");
+                telemetry.update();
+
 
                 //Now put back into original power mode
                 latchMotor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
