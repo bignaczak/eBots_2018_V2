@@ -4,7 +4,6 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
@@ -27,7 +26,7 @@ import java.util.Locale;
 //import java.lang.String;
 
 @Autonomous
-public class Auton_Depot_BETA2 extends LinearOpMode {
+public class Auton_Crater_BETA extends LinearOpMode {
 
     //This autonomous mode performs a sequence of tasks intended to :
     // move rover from the depot latch on the lander
@@ -370,7 +369,7 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         // Field heading is the imu direction based on the assumed zero point from lander
         // This command calculates the turn inputs for twistToAngle function and calls it
         if((desiredFieldHeading>0 & currentHeading<0)
-                | (desiredFieldHeading<0 && currentHeading>0)){
+            | (desiredFieldHeading<0 && currentHeading>0)){
             // If the desired heading is different sign from currentHeading
             // Modify the desired field heading
             double overflowAngle = 180-Math.abs(desiredFieldHeading);
@@ -498,6 +497,7 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
 
 
         //This autonomous mode performs the following tasks:
+        //**************  Same as Depot  *******************
         //  1)  a) Scans from latch
         //      b) Lands
         //      c) Moves away from lander a little
@@ -505,13 +505,17 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         //  3)  Moves  to sample
         //
         //  4)  Lowers the latch to prepare for reattaching
-        //  5)  Twists a little to align to depot
-        //  6)  Lower arm angle to drop marker
+        //**************  End Same as Depot  *******************
+
+        //  5)  If Center or Right, Move back to pre-sample position
+        //  6)  Move to Depot Approach Point
+        //  7)  Turn towards Depot
+        //  8)  Move to Depot while lowering arm
+        //  9)  Lower arm angle to drop marker
         //      b) reverse collector motors to drop marker
-        //  7) Retract arm angle to drive position
-        //  8) If in the center, move back a little to avoid the other sampling objects
-        //  9) Turn towards the crater
-        //  10) Move to the crater
+        //  10) Retract arm angle to drive position
+        //  11) Turn to Crater
+        //  12) Move to the crater
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         //  1) Land -->Unlatch from lander
@@ -651,7 +655,7 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
             driveX = SAMPLING_DRIVE_COMPONENT;
             delayTime += extraDelayTime;  //Add extra drive time because longer distance to spot
         } else {
-            driveY = 0;
+            driveX = 0;
         }
         spinSpeed = 0;      //This is used to determine how to spin the robot
         //This function will perform the drive step and stop the motors
@@ -664,22 +668,56 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         latchMotor.setTargetPosition(LATCH_DRIVE_POSITION);
         latchMotor.setPower(1);
 
-
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //  5) Spin a little for better alignment if left or right
-        spinAngle = SAMPLE_ALIGNMENT_TWIST_ANGLE;
+        //  5)  If Center or Right, Move back to pre-sample position
+
+        driveY = -1;         //Motion
+        delayTime = SAMPLING_DRIVE_TIME;
+        extraDelayTime = SAMPLING_EXTRA_DRIVE_TIME;
         if (goldPosition == "Right"){
-            spinAngle *= -1;
+            driveX = -SAMPLING_DRIVE_COMPONENT;
+            delayTime += extraDelayTime;  //Add extra drive time because longer distance to spot
+        } else {
+            driveX = 0;
         }
-        //Only spin if cube is left or right (not center)
-        if (goldPosition == "Right" | goldPosition == "Left"){
-            twistToAngle(spinAngle,0.6,motorList);
-        }
+        spinSpeed = 0;      //This is used to determine how to spin the robot
+        //This function will perform the drive step and stop the motors
+        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //  6)  Lower arm angle to drop marker
+        //  6)  Move to Depot Approach Point
+        driveX = -1;
+        spinSpeed = 0;      //This is used to determine how to spin the robot
+        if(goldPosition == "Left"){
+            driveY = -0.6;
+            delayTime = SAMPLING_DRIVE_TIME;
+        }else{
+            //If cube was either center or right
+            driveY = 0.2;
+            delayTime = SAMPLING_DRIVE_TIME + SAMPLING_EXTRA_DRIVE_TIME;
+        }
+        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);
+
+
+        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        //  7)  Turn towards Depot
+        turnToFieldHeading(45, motorList);
+
+        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        //  8)  Move to Depot while lowering arm
         armAngleMotor.setTargetPosition(ARM_ANGLE_DUMP_POSITION);
         armAngleMotor.setPower(1);
+
+        driveX = 0;
+        driveY = 1;
+        delayTime = 1000;
+        spinSpeed = 0;      //This is used to determine how to spin the robot
+        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);
+
+        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        //  9)  Lower arm angle to drop marker
+        //      b) reverse collector motors to drop marker
+        //
         while(armAngleMotor.isBusy()){
             //Wait for the marker to be placed
             //We could add a touch sensor here to improve timing
@@ -693,66 +731,31 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         performDriveStep(0, 0, 0, delayTime, motorList);  //delay for a second
         collectMotor.setPower(0);       //turn off the motor
 
-        //  7) Retract arm angle to drive position
+        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        //  10) Retract arm angle to drive position
+
         armAngleMotor.setTargetPosition(ARM_ANGLE_TRAVEL_POSITION);
         armAngleMotor.setPower(1);
         telemetry.update();
-        //Start raising the arm up to traveling position and then start moving.
-        //Delay a small amount while moving
-        delayTime = 1000;
-        driveX = 0;
-        driveY = 0;
-        spinSpeed = 0;
-        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
-
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //  8) If in the center, move back a little to avoid the other sampling objects
-        if(goldPosition == "Center") {
-            delayTime = SAMPLING_DRIVE_TIME/2;
-            driveX = 0;
-            driveY = -1;
-            spinSpeed = 0;
-            performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
-
-        }
+        //  11) Turn to Crater
+        turnToFieldHeading(-135, motorList);
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //  9) Spin to face the crater
-        //  The crater should be oriented 135 degrees to the right of the initialized position (-135 wrt gyro)
-        //  To determine spin angle, subtract -135 (aka add 135)
-
-        spinAngle = 135;
-        if (goldPosition == "Left" | goldPosition == "Right") spinAngle += SAMPLE_ALIGNMENT_TWIST_ANGLE;
-        if(goldPosition == "Left") {
-            spinAngle *= -1;
-        }
-
-        twistToAngle(spinAngle, 0.6, motorList);
-
-        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //  9) If coming from the center, move a little to avoid the lander leg
-        if(goldPosition == "Center") {
-            delayTime = EXTRA_CRATER_DRIVE_TIME;
-            driveX = -.7;  //Need to go mostly left
-            driveY = .4;    //And forward some
-            spinSpeed = 0;
-            performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
-        }
-
-
-        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //  10) Drive to the crater
-        //  If center cube was sampled, add some drive time
-        delayTime = CRATER_DRIVE_TIME;
+        //  12) Move to the crater
         driveX = 0;
         driveY = 1;
-        spinSpeed = 0;
-        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
+        delayTime = CRATER_DRIVE_TIME + EXTRA_CRATER_DRIVE_TIME;
+        spinSpeed = 0;      //This is used to determine how to spin the robot
+        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);
+
+
 
         //Make sure arm is fully extended and armAngle is in desired location before ending
         while (armAngleMotor.isBusy() | armExtensionMotor.isBusy()){
             //Wait for it to complete
+            telemetry.update();
         }
     }
 }
