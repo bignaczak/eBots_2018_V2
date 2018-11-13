@@ -64,9 +64,12 @@ public class Auton_Depot_BETA extends LinearOpMode {
 
 
     //  DEFINE CONSTANTS FOR THE ROBOT
-    final static int ARM_ANGLE_COLLECT_POSITION = -13400;  //TEST POSITIION
+    //  THESE ARE ALL POSITIONS ASSUMED THE ROBOT IS COMPLETELY FOLDED PRIOR TO START OF AUTON
+    final static int ARM_ANGLE_COLLECT_POSITION = -11750;  //REAL POSITION
+    //final static int ARM_ANGLE_COLLECT_POSITION = -10000;  //TEST POSITION
     final static int ARM_ANGLE_TRAVEL_POSITION = -5600;
-    final static int ARM_ANGLE_DUMP_POSITION = -12500;
+    final static int ARM_ANGLE_SCORE_POSITION = -1000;    //MUST VERIFY
+    final static int ARM_ANGLE_DUMP_POSITION = -11000;
 
     //These are constants used to define counts per revolution of NEVEREST motors with encoders
     static final int NEVEREST_60_CPR = 1680;
@@ -80,27 +83,32 @@ public class Auton_Depot_BETA extends LinearOpMode {
 
     final static int LATCH_DEPLOY_POSITION = 13200;        //13900 is a little too high
     //13500 is a little high for our practice lander
-    final static int LATCH_DRIVE_POSITION = 5900;          //5900 is good, could be a little higher
-    final static int LATCH_ENGAGE_POSITION = 9892;
-    final static int LATCH_RISEUP_POSITION = 1540;
+    final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
+    final static int LATCH_ENGAGE_POSITION = -9892;
+    final static int LATCH_RISEUP_POSITION = -1540;
 
     //MOTOR PROTECTION ENCODER
-    final static int ARM_ANGLE_LIMIT = -13000;
-    final static int ARM_EXTENSION_LIMIT = 27850;
-    final static int LATCH_LIMIT = 14000;
+    final static int ARM_ANGLE_LIMIT = -11750;  //REAL POSITION
+    //final static int ARM_ANGLE_LIMIT = -10000;  //TEST POSITION
+    final static int ARM_EXTENSION_LIMIT = -57500;
+    final static int LATCH_LIMIT = -14000;
 
     final static String VUFORIA_KEY = "AdGgXjv/////AAABmSSQR7vFmE3cjN2PqTebidhZFI8eL1qz4JblkX3JPyyYFRNp/Su1RHcHvkTzJ1YjafcDYsT0l6b/2U/fEZObIq8Si3JYDie2PfMRfdbx1+U0supMRZFrkcdize8JSaxMeOdtholJ+hUZN+C4Ovo7Eiy/1sBrqihv+NGt1bd2/fXwvlIDJFm5lJHF6FCj9f4I7FtIAB0MuhdTSu4QwYB84m3Vkx9iibTUB3L2nLLtRYcbVpoiqvlxvZomUd2JMef+Ux6+3FA3cPKCicVfP2psbjZrxywoc8iYUAq0jtsEaxgFdYoaTR+TWwNtKwJS6kwCgBWThcIQ6yI1jWEdrJYYFmHXJG/Rf/Nw8twEVh8l/Z0M";
-
 
     final static long SAMPLING_DRIVE_TIME = 1400;
     final static long SAMPLING_EXTRA_DRIVE_TIME = 300;
     final static double SAMPLING_DRIVE_COMPONENT = 0.70;
+    final static double SAMPLE_ALIGNMENT_TWIST_ANGLE = 10;
 
     final static long DEPOT_DRIVE_TIME = 1100;
     final static long DEPOT_EXTRA_DRIVE_TIME = 0;
     final static double DEPOT_DRIVE_COMPONENT = .4;
     final static long CRATER_DRIVE_TIME = 2800;  //was 2500 for first successful sample
     final static long EXTRA_CRATER_DRIVE_TIME = 700;
+    //****************************************************************
+    //END CONSTANTS
+
+
     //----------------------------------------------------------------------------------------------
     // Telemetry Configuration for gyro
     //----------------------------------------------------------------------------------------------
