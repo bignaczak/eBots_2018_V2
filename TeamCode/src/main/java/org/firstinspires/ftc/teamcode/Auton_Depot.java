@@ -3,9 +3,11 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.Func;
@@ -26,8 +28,9 @@ import java.util.List;
 import java.util.Locale;
 //import java.lang.String;
 
+//@Disabled
 @Autonomous
-public class Auton_Depot_BETA2 extends LinearOpMode {
+public class Auton_Depot extends LinearOpMode {
 
     //This autonomous mode performs a sequence of tasks intended to :
     // move rover from the depot latch on the lander
@@ -70,7 +73,7 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
     //final static int ARM_ANGLE_COLLECT_POSITION = -10000;  //TEST POSITION
     final static int ARM_ANGLE_TRAVEL_POSITION = -5600;
     final static int ARM_ANGLE_SCORE_POSITION = -1000;    //MUST VERIFY
-    final static int ARM_ANGLE_DUMP_POSITION = -11000;
+    final static int ARM_ANGLE_DUMP_POSITION = -9500;      //-11000 might be too low, can hit glass
 
     //These are constants used to define counts per revolution of NEVEREST motors with encoders
     static final int NEVEREST_60_CPR = 1680;
@@ -82,11 +85,11 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27800;
 
-    final static int LATCH_DEPLOY_POSITION = 13200;        //13900 is a little too high
+    final static int LATCH_DEPLOY_POSITION = -13200;        //13900 is a little too high
     //13500 is a little high for our practice lander
     final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
-    final static int LATCH_ENGAGE_POSITION = -9892;
-    final static int LATCH_RISEUP_POSITION = -1540;
+    final static int LATCH_ENGAGE_POSITION = -11000;
+    final static int LATCH_RISEUP_POSITION = -2500;
 
     //MOTOR PROTECTION ENCODER
     final static int ARM_ANGLE_LIMIT = -11750;  //REAL POSITION
@@ -96,16 +99,17 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
 
     final static String VUFORIA_KEY = "AdGgXjv/////AAABmSSQR7vFmE3cjN2PqTebidhZFI8eL1qz4JblkX3JPyyYFRNp/Su1RHcHvkTzJ1YjafcDYsT0l6b/2U/fEZObIq8Si3JYDie2PfMRfdbx1+U0supMRZFrkcdize8JSaxMeOdtholJ+hUZN+C4Ovo7Eiy/1sBrqihv+NGt1bd2/fXwvlIDJFm5lJHF6FCj9f4I7FtIAB0MuhdTSu4QwYB84m3Vkx9iibTUB3L2nLLtRYcbVpoiqvlxvZomUd2JMef+Ux6+3FA3cPKCicVfP2psbjZrxywoc8iYUAq0jtsEaxgFdYoaTR+TWwNtKwJS6kwCgBWThcIQ6yI1jWEdrJYYFmHXJG/Rf/Nw8twEVh8l/Z0M";
 
-    final static long SAMPLING_DRIVE_TIME = 1400;
-    final static long SAMPLING_EXTRA_DRIVE_TIME = 300;
-    final static double SAMPLING_DRIVE_COMPONENT = 0.70;
-    final static double SAMPLE_ALIGNMENT_TWIST_ANGLE = 10;
+    final static long SAMPLING_DRIVE_TIME = 1350;
+    final static long SAMPLING_EXTRA_DRIVE_TIME = 500;
+    final static double SAMPLING_DRIVE_COMPONENT = 0.85;
+    final static double SAMPLE_ALIGNMENT_TWIST_ANGLE = 30;
+    final static long CENTER_SAMPLE_CRATER_DRIVE_ALIGNMENT_TIME = 1200;
 
     final static long DEPOT_DRIVE_TIME = 1100;
     final static long DEPOT_EXTRA_DRIVE_TIME = 0;
     final static double DEPOT_DRIVE_COMPONENT = .4;
     final static long CRATER_DRIVE_TIME = 2800;  //was 2500 for first successful sample
-    final static long EXTRA_CRATER_DRIVE_TIME = 700;
+    final static long EXTRA_CRATER_DRIVE_TIME = 400;
     //****************************************************************
     //END CONSTANTS
 
@@ -256,7 +260,7 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         boolean currentHeadingModifier = false;  //Used as a flag if the target angle passes the 180 point
         double overFlowAngle = 0;
         double adjustedAngle = currentHeading;  //Adjusted angle is to handle crossover of sign at 180 degrees
-        double angleBufferForPrecision = 10;
+        double angleBufferForPrecision = 15;
         double throttleDownSpeed = 0.2;
         boolean throttledDown = false;
         //Create loop so robot spins until target angle is achieved
@@ -464,6 +468,7 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         collectMotor = hardwareMap.get(DcMotor.class, "collectMotor");
 
         latchMotor = hardwareMap.get(DcMotor.class, "latchMotor");
+        latchMotor.setDirection(DcMotor.Direction.REVERSE);
         latchMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         latchMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
@@ -472,6 +477,7 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         double driveX;
         double driveY;
         double spinSpeed;
+        double twistToAngleSpeed = 0.35;
         long delayTime;  //delay time in milliseconds
         long extraDelayTime;  //Based on drive trajectory, sometimes extra time is needed
         double driveComponentForSamplingDirection;
@@ -633,13 +639,13 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         //  d) Twist the front of the robot to the sampling area
-        twistToAngle(90, 0.6, motorList);
+        twistToAngle(85, twistToAngleSpeed, motorList);
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         //  3) Move to sample
         //     Based on the position of the gold element, align to knock it off
 
-        driveY = 1;         //Motion
+        driveY = .85;         //Motion
         delayTime = SAMPLING_DRIVE_TIME;
         extraDelayTime = SAMPLING_EXTRA_DRIVE_TIME;
 
@@ -651,7 +657,8 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
             driveX = SAMPLING_DRIVE_COMPONENT;
             delayTime += extraDelayTime;  //Add extra drive time because longer distance to spot
         } else {
-            driveY = 0;
+            driveX = 0;
+            driveY = 1;
         }
         spinSpeed = 0;      //This is used to determine how to spin the robot
         //This function will perform the drive step and stop the motors
@@ -673,7 +680,7 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         }
         //Only spin if cube is left or right (not center)
         if (goldPosition == "Right" | goldPosition == "Left"){
-            twistToAngle(spinAngle,0.6,motorList);
+            twistToAngle(spinAngle,twistToAngleSpeed,motorList);
         }
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -707,9 +714,15 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
 
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //  8) If in the center, move back a little to avoid the other sampling objects
+        //  8) If in the center, move forward a little to avoid the other sampling objects
         if(goldPosition == "Center") {
-            delayTime = SAMPLING_DRIVE_TIME/2;
+            delayTime = (long) (SAMPLING_DRIVE_TIME*.7);
+            driveX = 0;
+            driveY = 1;
+            spinSpeed = 0;
+            performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
+
+            delayTime = 400;
             driveX = 0;
             driveY = -1;
             spinSpeed = 0;
@@ -722,18 +735,21 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         //  The crater should be oriented 135 degrees to the right of the initialized position (-135 wrt gyro)
         //  To determine spin angle, subtract -135 (aka add 135)
 
-        spinAngle = 135;
+
+        spinAngle = 120;
         if (goldPosition == "Left" | goldPosition == "Right") spinAngle += SAMPLE_ALIGNMENT_TWIST_ANGLE;
+        if (goldPosition == "Right") spinAngle += 5;  //Add a little extra spin based on trials
         if(goldPosition == "Left") {
             spinAngle *= -1;
         }
 
-        twistToAngle(spinAngle, 0.6, motorList);
+        twistToAngle(spinAngle, twistToAngleSpeed, motorList);
 
+        //turnToFieldHeading(45, motorList);
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         //  9) If coming from the center, move a little to avoid the lander leg
         if(goldPosition == "Center") {
-            delayTime = EXTRA_CRATER_DRIVE_TIME;
+            delayTime = CENTER_SAMPLE_CRATER_DRIVE_ALIGNMENT_TIME;
             driveX = -.7;  //Need to go mostly left
             driveY = .4;    //And forward some
             spinSpeed = 0;
@@ -745,6 +761,7 @@ public class Auton_Depot_BETA2 extends LinearOpMode {
         //  10) Drive to the crater
         //  If center cube was sampled, add some drive time
         delayTime = CRATER_DRIVE_TIME;
+        if (goldPosition=="Left") delayTime += EXTRA_CRATER_DRIVE_TIME;
         driveX = 0;
         driveY = 1;
         spinSpeed = 0;

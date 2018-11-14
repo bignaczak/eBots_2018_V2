@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
@@ -24,9 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 //import java.lang.String;
-
+@Disabled
 @Autonomous
-public class Auton_Crater extends LinearOpMode {
+public class Auton_Crater_OBSOLETE_11142018 extends LinearOpMode {
 
     //This autonomous mode performs a sequence of tasks intended to :
     // move rover from the depot latch on the lander

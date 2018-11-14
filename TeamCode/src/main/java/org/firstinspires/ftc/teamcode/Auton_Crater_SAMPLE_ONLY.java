@@ -26,7 +26,7 @@ import java.util.Locale;
 //import java.lang.String;
 
 @Autonomous
-public class Auton_Depot_BETA extends LinearOpMode {
+public class Auton_Crater_SAMPLE_ONLY extends LinearOpMode {
 
     //This autonomous mode performs a sequence of tasks intended to :
     // move rover from the depot latch on the lander
@@ -69,7 +69,7 @@ public class Auton_Depot_BETA extends LinearOpMode {
     //final static int ARM_ANGLE_COLLECT_POSITION = -10000;  //TEST POSITION
     final static int ARM_ANGLE_TRAVEL_POSITION = -5600;
     final static int ARM_ANGLE_SCORE_POSITION = -1000;    //MUST VERIFY
-    final static int ARM_ANGLE_DUMP_POSITION = -11000;
+    final static int ARM_ANGLE_DUMP_POSITION = -9500;
 
     //These are constants used to define counts per revolution of NEVEREST motors with encoders
     static final int NEVEREST_60_CPR = 1680;
@@ -81,11 +81,11 @@ public class Auton_Depot_BETA extends LinearOpMode {
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27800;
 
-    final static int LATCH_DEPLOY_POSITION = 13200;        //13900 is a little too high
+    final static int LATCH_DEPLOY_POSITION = -13200;        //13900 is a little too high
     //13500 is a little high for our practice lander
     final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
-    final static int LATCH_ENGAGE_POSITION = -9892;
-    final static int LATCH_RISEUP_POSITION = -1540;
+    final static int LATCH_ENGAGE_POSITION = -11000;
+    final static int LATCH_RISEUP_POSITION = -2500;
 
     //MOTOR PROTECTION ENCODER
     final static int ARM_ANGLE_LIMIT = -11750;  //REAL POSITION
@@ -95,10 +95,10 @@ public class Auton_Depot_BETA extends LinearOpMode {
 
     final static String VUFORIA_KEY = "AdGgXjv/////AAABmSSQR7vFmE3cjN2PqTebidhZFI8eL1qz4JblkX3JPyyYFRNp/Su1RHcHvkTzJ1YjafcDYsT0l6b/2U/fEZObIq8Si3JYDie2PfMRfdbx1+U0supMRZFrkcdize8JSaxMeOdtholJ+hUZN+C4Ovo7Eiy/1sBrqihv+NGt1bd2/fXwvlIDJFm5lJHF6FCj9f4I7FtIAB0MuhdTSu4QwYB84m3Vkx9iibTUB3L2nLLtRYcbVpoiqvlxvZomUd2JMef+Ux6+3FA3cPKCicVfP2psbjZrxywoc8iYUAq0jtsEaxgFdYoaTR+TWwNtKwJS6kwCgBWThcIQ6yI1jWEdrJYYFmHXJG/Rf/Nw8twEVh8l/Z0M";
 
-    final static long SAMPLING_DRIVE_TIME = 1400;
-    final static long SAMPLING_EXTRA_DRIVE_TIME = 300;
-    final static double SAMPLING_DRIVE_COMPONENT = 0.70;
-    final static double SAMPLE_ALIGNMENT_TWIST_ANGLE = 10;
+    final static long SAMPLING_DRIVE_TIME = 1350;
+    final static long SAMPLING_EXTRA_DRIVE_TIME = 500;
+    final static double SAMPLING_DRIVE_COMPONENT = 0.85;
+    final static double SAMPLE_ALIGNMENT_TWIST_ANGLE = 30;
 
     final static long DEPOT_DRIVE_TIME = 1100;
     final static long DEPOT_EXTRA_DRIVE_TIME = 0;
@@ -107,7 +107,6 @@ public class Auton_Depot_BETA extends LinearOpMode {
     final static long EXTRA_CRATER_DRIVE_TIME = 700;
     //****************************************************************
     //END CONSTANTS
-
 
     //----------------------------------------------------------------------------------------------
     // Telemetry Configuration for gyro
@@ -254,51 +253,65 @@ public class Auton_Depot_BETA extends LinearOpMode {
     private void twistToAngle(double spinAngle, double speed,  ArrayList<DcMotor> motors){
         //Note this logic is demoed in the "Gyro" tab of "Rover Time Trials" Google Sheets file
         boolean currentHeadingModifier = false;  //Used as a flag if the target angle passes the 180 point
-        boolean startingSignPositive;           //Used to know starting sign of angle
         double overFlowAngle = 0;
-        double adjustedAngle;
-        startSpinning(spinAngle, speed, motors);
-
+        double adjustedAngle = currentHeading;  //Adjusted angle is to handle crossover of sign at 180 degrees
+        double angleBufferForPrecision = 10;
+        double throttleDownSpeed = 0.2;
+        boolean throttledDown = false;
         //Create loop so robot spins until target angle is achieved
         //Based on the field coordinate system, positive roll is spinning to the left
         //But the drive vector equations consider turning to the right to be positive
         //So to establish a targetAngle, the desired spinAngle must be subtracted from the currentHeading
         double targetAngle = currentHeading - spinAngle;
+
+        //The imu changes sign at 180 degrees
+        // For this control loop to work, must catch this CROSSOVER event
         if (Math.abs(targetAngle)>180){
             currentHeadingModifier = true;
-            if (currentHeading < 0) {
-                startingSignPositive = false;
-            } else {
-                startingSignPositive = true;
-            }
         }
+
+        startSpinning(spinAngle, speed, motors);
         if(spinAngle > 0){
-            if(!currentHeadingModifier){
             //If spinning to the right, keep spinning while angle is greater than target angle
-            while(currentHeading > targetAngle){
+            // When spinning right, imu angle is decreasing
+            while(opModeIsActive() && adjustedAngle > targetAngle) {
                 //  Just keep spinning to the right
+                if (currentHeadingModifier && currentHeading > 120) {
+                    //This detects when crossover occurs, must add overflow
+                    overFlowAngle = 180 - currentHeading;
+                    adjustedAngle = -180 - overFlowAngle;
+                } else {
+                    adjustedAngle = currentHeading;
+                }
+
+                if (!throttledDown && Math.abs(adjustedAngle - targetAngle) < angleBufferForPrecision){
+                    startSpinning(spinAngle,throttleDownSpeed, motors);
+                }
+
                 telemetry.addData("Target Spin", spinAngle);
                 telemetry.addData("Target Angle", targetAngle);
                 telemetry.addData("currentHeading", currentHeading);
                 telemetry.addData("Status", "Turning");
                 telemetry.update();
-            }} else {
-                adjustedAngle = currentHeading;
-                while(adjustedAngle > targetAngle){
-                    if(currentHeading > 120){
-                        adjustedAngle = -180-(180-currentHeading);
-                    }
-                    telemetry.addData("Target Spin", spinAngle);
-                    telemetry.addData("Target Angle", targetAngle);
-                    telemetry.addData("currentHeading", adjustedAngle);
-                    telemetry.addData("Status", "Turning");
-                    telemetry.update();
-                }
             }
         }else{
             //If spinning to the left, keep spinning while angle is less than target angle
-            while(currentHeading < targetAngle){
+            //When spinning left, the imu angle is increasing
+            //so keep spinning while heading is less than target
+            while (opModeIsActive() && adjustedAngle < targetAngle) {
                 //  Just keep spinning to the left
+                if(currentHeadingModifier && currentHeading < -120){
+                    //If crossover occurs
+                    overFlowAngle = 180 + currentHeading;  //add current heading since large negative
+                    adjustedAngle = 180 + overFlowAngle;
+                } else {
+                    adjustedAngle = currentHeading;
+                }
+
+                if (!throttledDown && Math.abs(adjustedAngle - targetAngle) < angleBufferForPrecision){
+                    startSpinning(spinAngle,throttleDownSpeed, motors);
+                }
+
                 telemetry.addData("Target Spin", spinAngle);
                 telemetry.addData("Target Angle", targetAngle);
                 telemetry.addData("currentHeading", currentHeading);
@@ -306,6 +319,7 @@ public class Auton_Depot_BETA extends LinearOpMode {
                 telemetry.update();
             }
         }
+
 
         telemetry.addData("Status", "Spin Complete");
         telemetry.update();
@@ -351,6 +365,24 @@ public class Auton_Depot_BETA extends LinearOpMode {
         }
     }
 
+    private void turnToFieldHeading (double desiredFieldHeading, ArrayList<DcMotor> motors){
+        // Field heading is the imu direction based on the assumed zero point from lander
+        // This command calculates the turn inputs for twistToAngle function and calls it
+        if((desiredFieldHeading>0 & currentHeading<0)
+            | (desiredFieldHeading<0 && currentHeading>0)){
+            // If the desired heading is different sign from currentHeading
+            // Modify the desired field heading
+            double overflowAngle = 180-Math.abs(desiredFieldHeading);
+            if(currentHeading<0){
+                desiredFieldHeading=-180-overflowAngle;
+            } else{
+                desiredFieldHeading = 180+overflowAngle;
+            }
+        }
+        double requiredTurnAngle = desiredFieldHeading - currentHeading;  //How many angles must turn
+        requiredTurnAngle *=-1;
+        twistToAngle(requiredTurnAngle,0.35, motors);
+    }
     /**
      * Initialize the Vuforia localization engine.
      */
@@ -431,6 +463,7 @@ public class Auton_Depot_BETA extends LinearOpMode {
         collectMotor = hardwareMap.get(DcMotor.class, "collectMotor");
 
         latchMotor = hardwareMap.get(DcMotor.class, "latchMotor");
+        latchMotor.setDirection(DcMotor.Direction.REVERSE);
         latchMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         latchMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
@@ -439,6 +472,7 @@ public class Auton_Depot_BETA extends LinearOpMode {
         double driveX;
         double driveY;
         double spinSpeed;
+        double twistToAngleSpeed = 0.35;
         long delayTime;  //delay time in milliseconds
         long extraDelayTime;  //Based on drive trajectory, sometimes extra time is needed
         double driveComponentForSamplingDirection;
@@ -465,20 +499,18 @@ public class Auton_Depot_BETA extends LinearOpMode {
 
 
         //This autonomous mode performs the following tasks:
+        //**************  Same as Depot  *******************
         //  1)  a) Scans from latch
-        //      a) Lands
-        //      b) move away from lander a little bit
-        //  2)  Scans the sampling area to try to identify the cube location
-        //  3)  Moves away from the lander
+        //      b) Lands
+        //      c) Moves away from lander a little
+        //      d)Spins to face sampling area
+        //  3)  Moves  to sample
+        //
         //  4)  Lowers the latch to prepare for reattaching
-        //  5)  a) Twist 95 degrees to sample object
-        //      b) Twist back 5 degrees to orient towards depot
-        //  6)  Move to Depot
-        //  7)  Lower arm angle to drop marker
-        //  8) Retract arm angle to drive position
-        //  9) Turn towards the crater
-        //  10) Move to the crater
-        //  11) Extend the Collector Arm and lower the arm angle
+        //**************  End Same as Depot  *******************
+
+        //  5)  Move forward to park in crater
+
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         //  1) Land -->Unlatch from lander
@@ -598,26 +630,28 @@ public class Auton_Depot_BETA extends LinearOpMode {
         spinSpeed = 0;
         performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
 
+        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        //  d) Twist the front of the robot to the sampling area
+        twistToAngle(85, twistToAngleSpeed, motorList);
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        //  3) Moves away from the lander
+        //  3) Move to sample
+        //     Based on the position of the gold element, align to knock it off
 
-        driveX = 1;         //Motion
+        driveY = 0.85;         //Motion
         delayTime = SAMPLING_DRIVE_TIME;
         extraDelayTime = SAMPLING_EXTRA_DRIVE_TIME;
-        driveComponentForSamplingDirection = SAMPLING_DRIVE_COMPONENT;
 
         //************************************
-        //Move to sample
-        //    Based on the position of the gold element, align to knock it off
         if (goldPosition == "Left"){
-            driveY = driveComponentForSamplingDirection;         //Motion in y direction to get to left spot
+            driveX = -SAMPLING_DRIVE_COMPONENT;         //Motion in y direction to get to left spot
             delayTime += extraDelayTime;        //Add extra drive time because longer distance to spot
         } else if (goldPosition == "Right"){
-            driveY = -driveComponentForSamplingDirection;
+            driveX = SAMPLING_DRIVE_COMPONENT;
             delayTime += extraDelayTime;  //Add extra drive time because longer distance to spot
         } else {
-            driveY = 0;
+            driveX = 0;
+            driveY = 1;
         }
         spinSpeed = 0;      //This is used to determine how to spin the robot
         //This function will perform the drive step and stop the motors
@@ -630,117 +664,31 @@ public class Auton_Depot_BETA extends LinearOpMode {
         latchMotor.setTargetPosition(LATCH_DRIVE_POSITION);
         latchMotor.setPower(1);
 
-
-        //  6)  Move to Depot
-        //      Based on where the sampling occurred, the depot drive direction must be determined
-        driveX = 1;         //Toward robot front
-        delayTime = DEPOT_DRIVE_TIME;
-        extraDelayTime = DEPOT_EXTRA_DRIVE_TIME;       //Extra time required for extra distance based on sampling location
-        driveComponentForSamplingDirection = DEPOT_DRIVE_COMPONENT;
-
-        //    Based on the position of the gold element, align to knock it off
-        if (goldPosition == "Left"){
-            driveY = -driveComponentForSamplingDirection;         //Motion in y direction to get to left spot
-            delayTime += extraDelayTime;        //Add extra drive time because longer distance to spot
-        } else if (goldPosition == "Right"){
-            driveY = +driveComponentForSamplingDirection;
-            delayTime += extraDelayTime;  //Add extra drive time because longer distance to spot
-        } else {
-            driveY = 0;
+        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        //  5) a) Spin a little for better alignment if left or right
+        spinAngle = SAMPLE_ALIGNMENT_TWIST_ANGLE;
+        if (goldPosition == "Right"){
+            spinAngle *= -1;
         }
-        spinSpeed = 0;      //This is used to determine how to spin the robot
-        //This function will perform the drive step and stop the motors
-        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);
-
-        //move back a little
-        driveX = -1;
-        driveY = 0;
-        spinSpeed = 0;
-        delayTime = 400;
-        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);
-
-        if(goldPosition == "Left") {
-            spinAngle = 135;
-        } else {
-            spinAngle = 45;
+        //Only spin if cube is left or right (not center)
+        if (goldPosition == "Right" | goldPosition == "Left"){
+            twistToAngle(spinAngle,twistToAngleSpeed,motorList);
         }
-        twistToAngle(spinAngle, 0.5, motorList);
 
-        //  7)  Lower arm angle to drop marker
-        armAngleMotor.setTargetPosition(ARM_ANGLE_DUMP_POSITION);
-        armAngleMotor.setPower(1);
-        while(armAngleMotor.isBusy()){
-            //Wait for the marker to be placed
-            //We could add a touch sensor here to improve timing
-            telemetry.update();
-        }
-        armAngleMotor.setPower(0);
 
-        //Turn back on for longer rev cycle
-        collectMotor.setPower(-1);
-        delayTime = 1000;
-        performDriveStep(0, 0, 0, delayTime, motorList);
-        collectMotor.setPower(0);
-
-        //  8) Retract arm angle to drive position
-        armAngleMotor.setTargetPosition(ARM_ANGLE_TRAVEL_POSITION);
-        armAngleMotor.setPower(1);
-        telemetry.update();
-        //Start raising the arm up to traveling position and then start moving.
+        //  b) move into crater
         //Delay a small amount while moving
-        delayTime = 1000;
+        delayTime = 700;
         driveX = 0;
-        driveY = 0;
+        driveY = 1;
         spinSpeed = 0;
         performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
 
-        //  9) Turn towards the crater
-        //  The crater should be oriented 135 degrees to the right of the initialized position (-135 wrt gyro)
-        //  To determine spin angle, subtract -135 (aka add 135)
 
-        //  Determine how far the rover must turn
-        //spinAngle = 120;
-        //spinSpeed = 0.5;
-        //twistToAngle(spinAngle,spinSpeed,motorList);
-
-        //  10) Move to the crater
-        //  First, move to the left some to hug the wall
-        delayTime = 900;
-        if(goldPosition == "Left"){
-            driveX = -1;
-        } else {
-            driveX = 1;
-        }
-        //driveX = -1;
-        driveY = 0;
-        spinSpeed = 0;
-        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
-
-        //  11) Extend the Collector Arm and lower the arm angle
-        armAngleMotor.setTargetPosition(ARM_ANGLE_TRAVEL_POSITION);
-        armAngleMotor.setPower(1);
-
-        //armExtensionMotor.setTargetPosition(ARM_EXTENSION_COLLECTION_POSITION);
-        //armExtensionMotor.setPower(1);
-
-        //  Similar to sampling, want to drive left a little while moving
-        if (goldPosition == "Right") {
-            delayTime = CRATER_DRIVE_TIME;
-        } else {
-            delayTime = CRATER_DRIVE_TIME + EXTRA_CRATER_DRIVE_TIME;
-        }
-        driveX = -0;
-        driveY = -1;
-        spinSpeed = 0;
-        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
-
-        //  11) Extend the Collector Arm and lower the arm angle
-        armAngleMotor.setTargetPosition(ARM_ANGLE_TRAVEL_POSITION);
-        armAngleMotor.setPower(1);
-
-
+        //Make sure arm is fully extended and armAngle is in desired location before ending
         while (armAngleMotor.isBusy() | armExtensionMotor.isBusy()){
             //Wait for it to complete
+            telemetry.update();
         }
     }
 }
