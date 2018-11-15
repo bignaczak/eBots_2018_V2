@@ -85,7 +85,7 @@ public class Auton_Depot extends LinearOpMode {
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27800;
 
-    final static int LATCH_DEPLOY_POSITION = -13200;        //13900 is a little too high
+    final static int LATCH_DEPLOY_POSITION = -13800;        //13900 is a little too high, -13200 usually good
     //13500 is a little high for our practice lander
     final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
     final static int LATCH_ENGAGE_POSITION = -11000;
@@ -291,6 +291,7 @@ public class Auton_Depot extends LinearOpMode {
 
                 if (!throttledDown && Math.abs(adjustedAngle - targetAngle) < angleBufferForPrecision){
                     startSpinning(spinAngle,throttleDownSpeed, motors);
+                    throttledDown = true;
                 }
 
                 telemetry.addData("Target Spin", spinAngle);
@@ -315,6 +316,7 @@ public class Auton_Depot extends LinearOpMode {
 
                 if (!throttledDown && Math.abs(adjustedAngle - targetAngle) < angleBufferForPrecision){
                     startSpinning(spinAngle,throttleDownSpeed, motors);
+                    throttledDown = true;
                 }
 
                 telemetry.addData("Target Spin", spinAngle);
@@ -615,7 +617,17 @@ public class Auton_Depot extends LinearOpMode {
 
 
         //Now, if the goldPosition was set based on 2 objects being observed, then use that value
-        if(goldPosition != "") goldPositionDetermined = true;
+        if(goldPosition != "") {
+            goldPositionDetermined = true;
+            //But if IMU has turned to right during landing, assume seeing the right 2 cubes
+            if (currentHeading < 0) {
+                if(goldPosition == "Center") {
+                    goldPosition = "Right";
+                }else {
+                    goldPosition = "Center";
+                }
+            }
+        }
 
         //if cube location is not determined, then randomly assign a location
         if(!goldPositionDetermined){
