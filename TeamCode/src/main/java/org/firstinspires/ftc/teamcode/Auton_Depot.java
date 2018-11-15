@@ -617,7 +617,7 @@ public class Auton_Depot extends LinearOpMode {
 
 
         //Now, if the goldPosition was set based on 2 objects being observed, then use that value
-        if(goldPosition != "") {
+        if(!goldPositionDetermined && goldPosition != "") {
             goldPositionDetermined = true;
             //But if IMU has turned to right during landing, assume seeing the right 2 cubes
             if (currentHeading < 0) {
