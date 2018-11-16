@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
@@ -24,9 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 //import java.lang.String;
-
+@Disabled
 @Autonomous
-public class Auton_Crater_SAMPLE_ONLY extends LinearOpMode {
+public class Auton_Crater_OBSOLETE_111618 extends LinearOpMode {
 
     //This autonomous mode performs a sequence of tasks intended to :
     // move rover from the depot latch on the lander
@@ -77,7 +78,7 @@ public class Auton_Crater_SAMPLE_ONLY extends LinearOpMode {
     static final int NEVEREST_20_CPR = 560;
 
     //final int ARM_EXTENSION_COLLECTION_POSITION = 27800;
-    final static int ARM_EXTENSION_COLLECTION_POSITION = -57500;  //test position
+    final static int ARM_EXTENSION_COLLECTION_POSITION = -54900;
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27800;
 
