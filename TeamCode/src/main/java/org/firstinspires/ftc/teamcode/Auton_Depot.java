@@ -81,7 +81,7 @@ public class Auton_Depot extends LinearOpMode {
     static final int NEVEREST_20_CPR = 560;
 
     //final int ARM_EXTENSION_COLLECTION_POSITION = 27800;
-    final static int ARM_EXTENSION_COLLECTION_POSITION = -54900; //  54946 was observed in -57500;  //test position
+    final static int ARM_EXTENSION_COLLECTION_POSITION = -56880; //  54946 was observed in -57500;  //test position
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27800;
 
