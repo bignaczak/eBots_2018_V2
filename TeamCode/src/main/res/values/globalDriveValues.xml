@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--    LATCH CONSTANTS  -->
+    <integer name="LATCH_DEPLOY_POSITION">-13800</integer>  <!--    13900 is a little too high, -13200 usually good, -13500 is a little high for our practice lander-->
+    <integer name="LATCH_DRIVE_POSITION">-5900</integer>    <!--    5900 is good, could be a little higher -->
+    <integer name="LATCH_ENGAGE_POSITION">-11000</integer>;
+    <integer name="LATCH_RISEUP_POSITION">-2500</integer>;
+
+    <!--    ARM ANGLE CONSTANTS  -->
+    <integer name="ARM_ANGLE_COLLECT_POSITION">-11750</integer>
+    <integer name="ARM_ANGLE_TRAVEL_POSITION">-5600</integer>
+    <integer name="ARM_ANGLE_SCORE_POSITION">-1000</integer>
+    <integer name="ARM_ANGLE_DUMP_POSITION">-9500</integer> <!--    11000 might be too low, can hit glass -->
+
+    <!--    ARM ANGLE CONSTANTS  -->
+    <integer name="ARM_EXTENSION_COLLECTION_POSITION">-56880</integer>  <!--54946 was observed, old was -57500  -->
+
+    <!--    MOTOR ENCODER CONSTANTS -->
+    <integer name="NEVEREST_60_CPR">1680</integer>
+    <integer name="NEVEREST_40_CPR">1120</integer>
+    <integer name="NEVEREST_20_CPR">560</integer>
+
+    <!--    SAMPLING DRIVE CONSTANTS -->
+    <integer name="SAMPLING_DRIVE_TIME">1350</integer>
+    <integer name="SAMPLING_EXTRA_DRIVE_TIME">500</integer>
+    <integer name="CENTER_SAMPLE_CRATER_DRIVE_ALIGNMENT_TIME">1200</integer>
+
+    <integer name="SAMPLE_ALIGNMENT_TWIST_ANGLE">30</integer>
+
+    <item type="string" format="float" name="SAMPLING_DRIVE_COMPONENT">0.85</item>
+
+    <!--    DEPOT TRAVEL DRIVE CONSTANTS -->
+    <integer name="DEPOT_DRIVE_TIME">1100</integer>
+    <integer name="DEPOT_EXTRA_DRIVE_TIME">0</integer>
+
+    <item type="string" format="float" name="DEPOT_DRIVE_COMPONENT">.4</item>
+
+    <!--    CRATER TRAVEL DRIVE CONSTANTS -->
+    <integer name="CRATER_DRIVE_TIME">2800</integer>  <!--was 2500 for first successful sample  -->
+    <integer name="EXTRA_CRATER_DRIVE_TIME">400</integer>
+
+
+
+    <!--    Sampling drive distance values-->
+    <integer name="SAMPLE_FORWARD_DISTANCE">8</integer>
+    <item name="SAMPLE_LATERAL_DISTANCE" format="float" type="dimen">16.9</item>
+
+    <item type="string" format="float" name="my_float">0.5</item>
+    <!--and this code to retrieve it: float my_float = Float.parseFloat (getResources ().getString (R.string.my_float)); -->
+
+</resources>
