@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
@@ -160,6 +161,67 @@ public abstract class eBotsOpMode extends LinearOpMode {
         TFObjectDetector.Parameters tfodParameters = new TFObjectDetector.Parameters(tfodMonitorViewId);
         tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
         tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABEL_GOLD_MINERAL, LABEL_SILVER_MINERAL);
+    }
+
+    public void initializeImu(){
+        // Set up the parameters with which we will use our IMU. Note that integration
+        // algorithm here just reports accelerations to the logcat log; it doesn't actually
+        // provide positional information.
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+        parameters.loggingEnabled      = true;
+        parameters.loggingTag          = "IMU";
+        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+
+        // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
+        // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
+        // and named "imu".
+        imu = hardwareMap.get(BNO055IMU.class, "imu");
+        imu.initialize(parameters);
+
+    }
+
+    public void initializeDriveMotors(ArrayList<DcMotor> motorList){
+        frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
+        frontRight = hardwareMap.get(DcMotor.class, "frontRight");
+        backLeft = hardwareMap.get(DcMotor.class, "backLeft");
+        backRight = hardwareMap.get(DcMotor.class, "backRight");
+
+        //reverse direction for opposite side motors
+        //This is needed based on how the motors are mounted on the robot
+        //Clockwise vs. Counter Clockwise being forward
+        frontLeft.setDirection(DcMotor.Direction.REVERSE);
+        backLeft.setDirection(DcMotor.Direction.REVERSE);
+
+        //Create an array of motors with their associated Power Setting
+        //ArrayList<DcMotor> motorList= new ArrayList<>();
+        motorList.add(frontLeft);
+        motorList.add(frontRight);
+        motorList.add(backLeft);
+        motorList.add(backRight);
+
+    }
+
+    public void initializeManipMotors(){
+        //Initialize motors for manipulator
+        armAngleMotor = hardwareMap.get(DcMotor.class, "armAngleMotor");
+        armAngleMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        armAngleMotor.setDirection(DcMotor.Direction.REVERSE);
+
+        armExtensionMotor = hardwareMap.get(DcMotor.class, "armExtensionMotor");
+        armExtensionMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        armExtensionMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        collectMotor = hardwareMap.get(DcMotor.class, "collectMotor");
+
+        latchMotor = hardwareMap.get(DcMotor.class, "latchMotor");
+        latchMotor.setDirection(DcMotor.Direction.REVERSE);
+        latchMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        latchMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
     }
 
     public double getCurrentHeading(){
@@ -491,8 +553,8 @@ public abstract class eBotsOpMode extends LinearOpMode {
             }
         }
 
-        //Perform the drive
-        //  Control the acceleration at the beginning
+        //Perform the drives step
+        //  Control the acceleration at the beginning to minimize slippage
         //  Track how far the robot has traveled
         //  Look for error conditions in the heading, which may indicate contact with other objects
 
@@ -501,7 +563,6 @@ public abstract class eBotsOpMode extends LinearOpMode {
         //  But before that, look at where we are relative to target position
         //  Use the min relative position to determine the drive scale factor
         int transientBuffer = encoderClicksPerRevolution * 2;  //Scale the drive values over this range
-        boolean inTransientSpeed = true;
         zeroDriveMotorEncoders(motors);
         int[] currentMotorPositions = new int[4];
         getMotorPositions(currentMotorPositions, motors);
@@ -521,12 +582,21 @@ public abstract class eBotsOpMode extends LinearOpMode {
         }
 
         //Setup some controls to manage the amount of time taken during a drive step
+        int targetPositionAccuracy = 50;
+        boolean driveStepPositionReached = false;
         long driveStepEndTime = (System.nanoTime() / 1000000);  //current time in milliseconds
-        long driveStepTimeBuffer = 3500;  //Buffer time in milliseconds for transient
+        long driveStepTimeBuffer = 2500;  //Buffer time in milliseconds for transient
         driveStepEndTime = driveStepEndTime + (long)(expectedTravelTime*1000) + driveStepTimeBuffer;
+        boolean driveStepTimedOut = false;
+        int consecutiveCyclesWithIncreasingError = 0;
+        int previousPositionError = maxClicksFromStart;
+        int overshootCycleCountLimit = 7;
+        boolean driveStepOvershootDetected = false;
 
-        while (minClicksFromTarget > 50  //If encoder is within this many clicks
-                & (System.nanoTime() / 1000000) < driveStepEndTime){  //Or it takes too much time {
+        while (!driveStepPositionReached  //If encoder is within this many clicks
+                & !driveStepTimedOut  //Or it takes too much time
+                & !driveStepOvershootDetected){  //Or going to wrong way
+
             //Get current positions
             getMotorPositions(currentMotorPositions, motors);
 
@@ -535,11 +605,19 @@ public abstract class eBotsOpMode extends LinearOpMode {
             minClicksFromTarget = getNumClicksFromTarget(currentMotorPositions, encoderTargetValues);
             positionForScaleFactor = (maxClicksFromStart < minClicksFromTarget) ? maxClicksFromStart : minClicksFromTarget;
 
+            //See if position error has decreased from last cycle
+            if(maxClicksFromStart > previousPositionError){
+                consecutiveCyclesWithIncreasingError ++;
+                if (consecutiveCyclesWithIncreasingError > overshootCycleCountLimit) driveStepOvershootDetected = true;
+            }else{
+                consecutiveCyclesWithIncreasingError=0;
+            }
+
+            previousPositionError = maxClicksFromStart;
+
             if (positionForScaleFactor < transientBuffer) {
-                inTransientSpeed = true;
                 driveScaleFactor = ((1 - minPowerScale) / transientBuffer) * (transientBuffer - positionForScaleFactor);
             } else {
-                inTransientSpeed = false;
                 driveScaleFactor = 1;
             }
 
@@ -548,22 +626,32 @@ public abstract class eBotsOpMode extends LinearOpMode {
                 scaledDriveVector[i] = driveDistances[i] * driveScaleFactor;
                 motors.get(i).setPower(scaledDriveVector[i]);
             }
+
+            //Check if position reached or step has timed out
+            if (minClicksFromTarget < targetPositionAccuracy) driveStepPositionReached = true;
+            if ((System.nanoTime() / 1000000) > driveStepEndTime) driveStepTimedOut = true;
         }
+
+        //Stop all motors
+        stopMotors(motors);
 
         //Check the heading at the end of the move and correct it if necessary
         double headingError = checkHeadingVersusTarget(targetHeading);
-
+        double targetHeadingAccuracy = 5;
+        boolean targetHeadingAchieved = false;
+        if (Math.abs(headingError) <= targetHeadingAccuracy) targetHeadingAchieved=true;
         //If error is too high, correct
-        if (Math.abs(headingError)>10)  {
+        /*if (Math.abs(headingError)>10)  {
             twistToAngle(headingError,0.2,motors);
-        }
+        }*/
 
-        if (Math.abs(headingError) < 5){
+        //Now check all the different states of the drive step to determine if it was successfully completed
+        if (driveStepPositionReached && targetHeadingAchieved
+                && !driveStepTimedOut && !driveStepOvershootDetected) {
             return true;
         }else{
             return false;
         }
-
     }
 
     private double checkHeadingVersusTarget(double targetHeading){

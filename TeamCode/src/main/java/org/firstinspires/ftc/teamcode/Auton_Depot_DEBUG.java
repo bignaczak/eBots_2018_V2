@@ -41,61 +41,15 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
 
     @Override
     public void runOpMode(){
-        // Set up the parameters with which we will use our IMU. Note that integration
-        // algorithm here just reports accelerations to the logcat log; it doesn't actually
-        // provide positional information.
-/*
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
-        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
-        parameters.loggingEnabled      = true;
-        parameters.loggingTag          = "IMU";
-        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
-*/
+        //Prepare the gyro in the Expansion hub
+/*        initializeImu();
 
-        // Retrieve and initialize the IMU. We expect the IMU to be attached to an I2C port
-        // on a Core Device Interface Module, configured to be a sensor of type "AdaFruit IMU",
-        // and named "imu".
-        //imu = hardwareMap.get(BNO055IMU.class, "imu");
-        //imu.initialize(parameters);
-
-/*
-        frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
-        frontRight = hardwareMap.get(DcMotor.class, "frontRight");
-        backLeft = hardwareMap.get(DcMotor.class, "backLeft");
-        backRight = hardwareMap.get(DcMotor.class, "backRight");
-
-        //reverse direction for opposite side motors
-        //This is needed based on how the motors are mounted on the robot
-        //Clockwise vs. Counter Clockwise being forward
-        frontLeft.setDirection(DcMotor.Direction.REVERSE);
-        backLeft.setDirection(DcMotor.Direction.REVERSE);
-
-        //Create an array of motors with their associated Power Setting
+        //Create an array for drive motors
         ArrayList<DcMotor> motorList= new ArrayList<>();
-        motorList.add(frontLeft);
-        motorList.add(frontRight);
-        motorList.add(backLeft);
-        motorList.add(backRight);
+        initializeDriveMotors(motorList);
 
         //Initialize motors for manipulator
-        armAngleMotor = hardwareMap.get(DcMotor.class, "armAngleMotor");
-        armAngleMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        armAngleMotor.setDirection(DcMotor.Direction.REVERSE);
-
-        armExtensionMotor = hardwareMap.get(DcMotor.class, "armExtensionMotor");
-        armExtensionMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        armExtensionMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-
-        collectMotor = hardwareMap.get(DcMotor.class, "collectMotor");
-
-        latchMotor = hardwareMap.get(DcMotor.class, "latchMotor");
-        latchMotor.setDirection(DcMotor.Direction.REVERSE);
-        latchMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        latchMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-*/
+        initializeManipMotors();*/
 
         //Initialize the variables that are being used in the main loop
         double spinAngle;    //NOTE:  Positive spin is towards right
