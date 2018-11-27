@@ -8,14 +8,12 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
-import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 
 import java.util.ArrayList;
-import java.util.List;
 
 //@Disabled
 @Autonomous
-public class Auton_Depot_DEBUG extends eBotsOpMode {
+public class Auton_Depot_BETA2 extends eBotsOpMode {
 
     //This autonomous mode performs a sequence of tasks intended to :
     // move rover from the depot latch on the lander
@@ -28,12 +26,6 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
     //  DEFINE CONSTANTS FOR THE ROBOT
     //  THESE ARE ALL POSITIONS ASSUMED THE ROBOT IS COMPLETELY FOLDED PRIOR TO START OF AUTON
 
-    final static double SAMPLING_DRIVE_COMPONENT = 0.85;
-    final static double DEPOT_DRIVE_COMPONENT = .4;
-    final static String VUFORIA_KEY = "AdGgXjv/////AAABmSSQR7vFmE3cjN2PqTebidhZFI8eL1qz4JblkX3JPyyYFRNp/Su1RHcHvkTzJ1YjafcDYsT0l6b/2U/fEZObIq8Si3JYDie2PfMRfdbx1+U0supMRZFrkcdize8JSaxMeOdtholJ+hUZN+C4Ovo7Eiy/1sBrqihv+NGt1bd2/fXwvlIDJFm5lJHF6FCj9f4I7FtIAB0MuhdTSu4QwYB84m3Vkx9iibTUB3L2nLLtRYcbVpoiqvlxvZomUd2JMef+Ux6+3FA3cPKCicVfP2psbjZrxywoc8iYUAq0jtsEaxgFdYoaTR+TWwNtKwJS6kwCgBWThcIQ6yI1jWEdrJYYFmHXJG/Rf/Nw8twEVh8l/Z0M";
-
-    //****************************************************************
-    //END CONSTANTS
 
     //----------------------------------------------------------------------------------------------
     // Telemetry Configuration for gyro
@@ -59,15 +51,13 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
         double twistToAngleSpeed = 0.35;
         long delayTime;  //delay time in milliseconds
         long extraDelayTime;  //Based on drive trajectory, sometimes extra time is needed
+        double driveComponentForSamplingDirection;
         boolean goldPositionDetermined = false;
         GoldPosition goldPosition = GoldPosition.UNKNOWN;
-        int goldX = -1;
-        int silver1X = -1;
-        int silver2X = -1;
         //Wait for the game to start(driver presses PLAY)
 
         // Set up our telemetry dashboard
-        //composeTelemetry();
+        composeTelemetry();
 
         // The TFObjectDetector uses the camera frames from the VuforiaLocalizer, so we create that
         // first.
@@ -81,7 +71,7 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
 
         waitForStart();
         // Start the logging of measured acceleration
-        //imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+        imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
 
 
         //This autonomous mode performs the following tasks:
@@ -107,6 +97,13 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
             tfod.activate();
         }
 
+        latchMotor.setTargetPosition(LATCH_DEPLOY_POSITION);
+        telemetry.addData("Latch Target", latchMotor.getTargetPosition());
+        telemetry.addData("Latch Current Position", latchMotor.getCurrentPosition());
+        telemetry.update();
+        latchMotor.setPower(1);
+
+        //Initialize variables for the sampling loop
         int samplingScanCount = 0;
         int goldLeftCount = 0;
         int goldCenterCount = 0;
@@ -117,34 +114,40 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
         double goldCenterConfidence = 0;
         double goldRightConfidence = 0;
         double thresholdConfidence = 0.5;
-        while(opModeIsActive()){
-            //run this loop while the opmode until user pushes stop
-            //if (tfod != null && !goldPositionDetermined) {
+
+        while(latchMotor.isBusy()) {
+            //while the robot is descending, scan for minerals
             if (tfod != null) {
                 TensorFlowRefactor tensorFlowRefactor = new TensorFlowRefactor().invoke();
                 samplingScanCount++;    //Increment the number of samping scans
                 //Now number of loops where sampling response is received
-                if(tensorFlowRefactor.getGoldPosition() != GoldPosition.UNKNOWN
-                        | tensorFlowRefactor.getGoldNotLocated() != GoldPosition.UNKNOWN){
-                    samplingResponseReceived ++;
+                if (tensorFlowRefactor.getGoldPosition() != GoldPosition.UNKNOWN
+                        | tensorFlowRefactor.getGoldNotLocated() != GoldPosition.UNKNOWN) {
+                    samplingResponseReceived++;
                 }
                 //Now use the results from the scan to record observations
-                if(tensorFlowRefactor.getGoldPosition() == GoldPosition.LEFT) goldLeftCount++;
-                else if (tensorFlowRefactor.getGoldPosition() == GoldPosition.CENTER) goldCenterCount++;
-                else if (tensorFlowRefactor.getGoldPosition() == GoldPosition.RIGHT) goldRightCount++;
+                if (tensorFlowRefactor.getGoldPosition() == GoldPosition.LEFT) goldLeftCount++;
+                else if (tensorFlowRefactor.getGoldPosition() == GoldPosition.CENTER)
+                    goldCenterCount++;
+                else if (tensorFlowRefactor.getGoldPosition() == GoldPosition.RIGHT)
+                    goldRightCount++;
 
                 if (tensorFlowRefactor.getGoldNotLocated() == GoldPosition.LEFT) goldLeftCount--;
-                else if (tensorFlowRefactor.getGoldNotLocated() == GoldPosition.CENTER) goldCenterCount--;
-                else if (tensorFlowRefactor.getGoldNotLocated() == GoldPosition.RIGHT) goldRightCount--;
+                else if (tensorFlowRefactor.getGoldNotLocated() == GoldPosition.CENTER)
+                    goldCenterCount--;
+                else if (tensorFlowRefactor.getGoldNotLocated() == GoldPosition.RIGHT)
+                    goldRightCount--;
 
             }
-            if(samplingResponseReceived>0){
-                goldLeftConfidence = (double)(goldLeftCount) / samplingResponseReceived;
-                goldCenterConfidence = (double)(goldCenterCount) / samplingResponseReceived;
+            if (samplingResponseReceived > 0) {
+                goldLeftConfidence = (double) (goldLeftCount) / samplingResponseReceived;
+                goldCenterConfidence = (double) (goldCenterCount) / samplingResponseReceived;
                 goldRightConfidence = (double) (goldRightCount) / samplingResponseReceived;
                 samplingInputPercentage = (double) (samplingResponseReceived) / samplingScanCount;
 
             }
+            telemetry.addData("Latch Target", latchMotor.getTargetPosition());
+            telemetry.addData("Latch Current Position", latchMotor.getCurrentPosition());
             telemetry.addData("Scan Count", samplingScanCount);
             telemetry.addData("Input Rate", samplingInputPercentage);
             telemetry.addData("Left Rating", goldLeftConfidence);
@@ -152,6 +155,7 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
             telemetry.addData("Right Rating", goldRightConfidence);
             telemetry.update();
         }
+
         //Based on the confidence numbers calculated above, determine the final goldPosition
         if (goldLeftConfidence>goldCenterConfidence
                 && goldLeftConfidence > goldRightConfidence
@@ -170,7 +174,7 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
         //If position was determined, set the boolean flag
         if (goldPosition != GoldPosition.UNKNOWN) goldPositionDetermined = true;
 
-        //if cube location is not determined, then randomly assign a location
+        //if gold location is not determined, then randomly assign a location
         if(!goldPositionDetermined){
             double randomNumber = Math.random();
             if(randomNumber <= 0.33){
@@ -184,6 +188,44 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
         //Report out the final position
         telemetry.addData("Gold Position", goldPosition.toString());
         telemetry.update();
+
+
+        //Cut power to the latch motor
+        latchMotor.setPower(0);
+
+        /*//Start the arm extension
+        armExtensionMotor.setTargetPosition(R.integer.ARM_EXTENSION_COLLECTION_POSITION);
+        armExtensionMotor.setPower(1);
+
+        //Get the arm to travel position
+        armAngleMotor.setTargetPosition(R.integer.ARM_ANGLE_TRAVEL_POSITION);
+        armAngleMotor.setPower(1);
+*/
+        //  b) move away from the lander a little bit
+        //Delay a small amount while moving
+        delayTime = 300;
+        driveX = 1;
+        driveY = 0;
+        spinSpeed = 0;
+        performDriveStep(driveX, driveY, spinSpeed, delayTime, motorList);  //Just a pause, no movement
+
+        //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        //  d) Twist the front of the robot to the sampling area
+        //twistToAngle(85, twistToAngleSpeed, motorList);
+        boolean hasTurnedSuccessfully = turnToFieldHeading(-90, motorList);
+
+        latchMotor.setTargetPosition(-50);
+        latchMotor.setPower(1);
+        while(latchMotor.isBusy()){
+            //just wait
+            getCurrentHeading();
+            telemetry.addData("heading", currentHeading);
+            telemetry.addData("turn successful", hasTurnedSuccessfully);
+            telemetry.update();
+        }
+
+
     }
+
 
 }

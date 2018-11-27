@@ -259,7 +259,6 @@ public class Auton_Depot_BETA extends eBotsOpMode {
         //If position was determined, set the boolean flag
         if (goldPosition != GoldPosition.UNKNOWN) goldPositionDetermined = true;
 
-        //TODO:  Add logic to consider positions that were identified as goldNotLocated
         //if gold location is not determined, then randomly assign a location
         if(!goldPositionDetermined){
             double randomNumber = Math.random();
@@ -279,14 +278,14 @@ public class Auton_Depot_BETA extends eBotsOpMode {
         //Cut power to the latch motor
         latchMotor.setPower(0);
 
-        //Start the arm extension
+        /*//Start the arm extension
         armExtensionMotor.setTargetPosition(R.integer.ARM_EXTENSION_COLLECTION_POSITION);
         armExtensionMotor.setPower(1);
 
         //Get the arm to travel position
         armAngleMotor.setTargetPosition(R.integer.ARM_ANGLE_TRAVEL_POSITION);
         armAngleMotor.setPower(1);
-
+*/
         //  b) move away from the lander a little bit
         //Delay a small amount while moving
         delayTime = 300;
@@ -298,6 +297,7 @@ public class Auton_Depot_BETA extends eBotsOpMode {
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         //  d) Twist the front of the robot to the sampling area
         twistToAngle(85, twistToAngleSpeed, motorList);
+
 
         //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         //  3) Move to sample

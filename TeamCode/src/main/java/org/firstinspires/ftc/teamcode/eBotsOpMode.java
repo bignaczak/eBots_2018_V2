@@ -51,6 +51,52 @@ public abstract class eBotsOpMode extends LinearOpMode {
     public TFObjectDetector tfod;
     public final static String VUFORIA_KEY = "AdGgXjv/////AAABmSSQR7vFmE3cjN2PqTebidhZFI8eL1qz4JblkX3JPyyYFRNp/Su1RHcHvkTzJ1YjafcDYsT0l6b/2U/fEZObIq8Si3JYDie2PfMRfdbx1+U0supMRZFrkcdize8JSaxMeOdtholJ+hUZN+C4Ovo7Eiy/1sBrqihv+NGt1bd2/fXwvlIDJFm5lJHF6FCj9f4I7FtIAB0MuhdTSu4QwYB84m3Vkx9iibTUB3L2nLLtRYcbVpoiqvlxvZomUd2JMef+Ux6+3FA3cPKCicVfP2psbjZrxywoc8iYUAq0jtsEaxgFdYoaTR+TWwNtKwJS6kwCgBWThcIQ6yI1jWEdrJYYFmHXJG/Rf/Nw8twEVh8l/Z0M";
 
+    //  DEFINE CONSTANTS FOR THE ROBOT
+    //  THESE ARE ALL POSITIONS ASSUMED THE ROBOT IS COMPLETELY FOLDED PRIOR TO START OF AUTON
+    final static int ARM_ANGLE_COLLECT_POSITION = -11750;  //REAL POSITION
+    //final static int ARM_ANGLE_COLLECT_POSITION = -10000;  //TEST POSITION
+    final static int ARM_ANGLE_TRAVEL_POSITION = -5600;
+    final static int ARM_ANGLE_SCORE_POSITION = -1000;    //MUST VERIFY
+    final static int ARM_ANGLE_DUMP_POSITION = -9500;      //-11000 might be too low, can hit glass
+
+    //These are constants used to define counts per revolution of NEVEREST motors with encoders
+    static final int NEVEREST_60_CPR = 1680;
+    static final int NEVEREST_40_CPR = 1120;
+    static final int NEVEREST_20_CPR = 560;
+
+    //final int ARM_EXTENSION_COLLECTION_POSITION = 27800;
+    final static int ARM_EXTENSION_COLLECTION_POSITION = -56880; //  54946 was observed in -57500;  //test position
+    final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
+    final static int ARM_EXTENSION_DUMP_POSITION = -27800;
+
+    final static int LATCH_DEPLOY_POSITION = -13800;        //13900 is a little too high, -13200 usually good
+    //13500 is a little high for our practice lander
+    final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
+    final static int LATCH_ENGAGE_POSITION = -11000;
+    final static int LATCH_RISEUP_POSITION = -2500;
+
+    //MOTOR PROTECTION ENCODER
+    final static int ARM_ANGLE_LIMIT = -11750;  //REAL POSITION
+    //final static int ARM_ANGLE_LIMIT = -10000;  //TEST POSITION
+    final static int ARM_EXTENSION_LIMIT = -57500;
+    final static int LATCH_LIMIT = -14000;
+
+    final static long SAMPLING_DRIVE_TIME = 1350;
+    final static long SAMPLING_EXTRA_DRIVE_TIME = 500;
+    final static double SAMPLING_DRIVE_COMPONENT = 0.85;
+    final static double SAMPLE_ALIGNMENT_TWIST_ANGLE = 30;
+    final static long CENTER_SAMPLE_CRATER_DRIVE_ALIGNMENT_TIME = 1200;
+
+    final static long DEPOT_DRIVE_TIME = 1100;
+    final static long DEPOT_EXTRA_DRIVE_TIME = 0;
+    final static double DEPOT_DRIVE_COMPONENT = .4;
+    final static long CRATER_DRIVE_TIME = 2800;  //was 2500 for first successful sample
+    final static long EXTRA_CRATER_DRIVE_TIME = 400;
+
+    //****************************************************************
+    //END CONSTANTS
+
+
     //TODO:  Refactor to mineral position
     enum GoldPosition
     {
@@ -350,12 +396,12 @@ public abstract class eBotsOpMode extends LinearOpMode {
             speed = fullSpeed - ((slopeForThrottleDown) * (angleBufferForPrecision-angleFromTarget));
         }
         startSpinning(spinAngle, speed, motors);
-
+        double spinAngleUndershoot = 2;
         //TODO: Compress these two loops into 1
         if(spinAngle > 0){
             //If spinning to the right, keep spinning while angle is greater than target angle
             // When spinning right, imu angle is decreasing
-            while(opModeIsActive() && adjustedAngle > targetAngle) {
+            while(opModeIsActive() && adjustedAngle > (targetAngle+spinAngleUndershoot)) {
                 //  Just keep spinning to the right
 
                 //Get the new adjusted angle
@@ -384,7 +430,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
             //If spinning to the left, keep spinning while angle is less than target angle
             //When spinning left, the imu angle is increasing
             //so keep spinning while heading is less than target
-            while (opModeIsActive() && adjustedAngle < targetAngle) {
+            while (opModeIsActive() && adjustedAngle < (targetAngle-spinAngleUndershoot)) {
                 //  Just keep spinning to the left
 
                 //Get the new adjusted angle
@@ -456,7 +502,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         }
     }
 
-    private boolean turnToFieldHeading (double desiredFieldHeading, ArrayList<DcMotor> motors){
+    public boolean turnToFieldHeading (double desiredFieldHeading, ArrayList<DcMotor> motors){
         // Field heading is the imu direction based on the assumed zero point from lander
         // This command calculates the turn inputs for twistToAngle function and calls it
         double requiredTurnAngle = checkHeadingVersusTarget(desiredFieldHeading);  //How many angles must turn
@@ -482,7 +528,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         //  Determine time to complete
 
         //Initialize variables for drive distance calculations
-        int encoderClicksPerRevolution = R.integer.NEVEREST_20_CPR;
+        int encoderClicksPerRevolution = NEVEREST_40_CPR;
         double wheelDiameter = 3.0;
         double wheelDiagonalSpacing = 21.3;
         double peakRobotSpeed = 30;  //peak robot speed in inches per second
@@ -494,7 +540,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         double requiredSpinDistance = rotationAngle/360 * spinCircumference;  //distance in inches required for spin
 
         //Calculate wheel revolution distance for travel
-        double robotAngle = Math.atan2(inchesForward, inchesLateral);   //  Angle used for mecanum drive vector
+        double robotAngle = Math.atan2(inchesForward, inchesLateral) - (Math.PI/4);   //  Angle used for mecanum drive vector
         double travelDistance = Math.sqrt(Math.pow(inchesForward,2) + Math.pow(inchesLateral,2));
 
         //Set the target heading.  Note that rotationAngle is positive if to right, which is opposite imu direction
@@ -531,7 +577,13 @@ public abstract class eBotsOpMode extends LinearOpMode {
 
             //Convert the distances to encoder targets
             //TODO:  Verify the signs for each motor based on spin direction
+            //  Front motors increase clicks with positive power
+            //  Rear motors decrease clicks with positive power
             encoderTargetValues[i] = (int) driveDistances[i] * encoderClicksPerInch;
+            if(i==2 | i==3){
+                //Reverse the sign for back motors
+                encoderTargetValues[i] *= -1;
+            }
         }
 
         //  Find the max distance traveled and determine expected travel time
@@ -541,13 +593,13 @@ public abstract class eBotsOpMode extends LinearOpMode {
         //Now that the distances are know for each wheel, determine drive vectors
         //  Assume that the motor speed is linearly proportional from 0-0.85
         double maxTargetDriveValue = 0.85;  //Max motor power
-        double minPowerThreshold = 0.1;     //Min motor power
+        double minPowerThreshold = 0.15;     //Min motor power
         double distanceDriveScaleFactor = maxTargetDriveValue / maxDistance;
         if (maxDistance > maxTargetDriveValue) scaleDrive(distanceDriveScaleFactor, driveDistances);  //Scale drive
         //If drive power too low, zero it out and also zero the corresponding encoder target
         //Note that after scaling, driveDistances is the vector for motor power
         for (int i=0; i<driveDistances.length; i++) {
-            if(driveDistances[i]<minPowerThreshold) {
+            if(Math.abs(driveDistances[i])<minPowerThreshold) {
                 driveDistances[i]=0;
                 encoderTargetValues[i] = 0;
             }
@@ -562,7 +614,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         //Now get prepared to move
         //  But before that, look at where we are relative to target position
         //  Use the min relative position to determine the drive scale factor
-        int transientBuffer = encoderClicksPerRevolution * 2;  //Scale the drive values over this range
+        int transientBuffer = encoderClicksPerRevolution * 1;  //Scale the drive values over this range
         zeroDriveMotorEncoders(motors);
         int[] currentMotorPositions = new int[4];
         getMotorPositions(currentMotorPositions, motors);
@@ -573,7 +625,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         //determine the drive motor scale factor
         //  this is a number between the minPowerScale and 1 that varies
         //  with the position within the transient range
-        double minPowerScale = 0.3;
+        double minPowerScale = 0.5;
         double driveScaleFactor = ((1-minPowerScale)/transientBuffer) * (transientBuffer-positionForScaleFactor);
         double[] scaledDriveVector = new double[4];
         for (int i=0; i<scaledDriveVector.length; i++){
@@ -585,7 +637,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         int targetPositionAccuracy = 50;
         boolean driveStepPositionReached = false;
         long driveStepEndTime = (System.nanoTime() / 1000000);  //current time in milliseconds
-        long driveStepTimeBuffer = 2500;  //Buffer time in milliseconds for transient
+        long driveStepTimeBuffer = 5000;  //Buffer time in milliseconds for transient
         driveStepEndTime = driveStepEndTime + (long)(expectedTravelTime*1000) + driveStepTimeBuffer;
         boolean driveStepTimedOut = false;
         int consecutiveCyclesWithIncreasingError = 0;
@@ -595,7 +647,8 @@ public abstract class eBotsOpMode extends LinearOpMode {
 
         while (!driveStepPositionReached  //If encoder is within this many clicks
                 & !driveStepTimedOut  //Or it takes too much time
-                & !driveStepOvershootDetected){  //Or going to wrong way
+                //& !driveStepOvershootDetected
+                ){  //Or going to wrong way
 
             //Get current positions
             getMotorPositions(currentMotorPositions, motors);
@@ -630,6 +683,17 @@ public abstract class eBotsOpMode extends LinearOpMode {
             //Check if position reached or step has timed out
             if (minClicksFromTarget < targetPositionAccuracy) driveStepPositionReached = true;
             if ((System.nanoTime() / 1000000) > driveStepEndTime) driveStepTimedOut = true;
+            getCurrentHeading();
+            telemetry.addData("target value0", encoderTargetValues[0]);
+            telemetry.addData("target value1", encoderTargetValues[1]);
+            telemetry.addData("target value2", encoderTargetValues[2]);
+            telemetry.addData("target value3", encoderTargetValues[3]);
+            telemetry.addData("Actual Value0", currentMotorPositions[0]);
+            telemetry.addData("Actual Value1", currentMotorPositions[1]);
+            telemetry.addData("Actual Value2", currentMotorPositions[2]);
+            telemetry.addData("Actual Value3", currentMotorPositions[3]);
+            telemetry.addData("Heading", currentHeading);
+            telemetry.update();
         }
 
         //Stop all motors
