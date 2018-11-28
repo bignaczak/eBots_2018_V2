@@ -516,9 +516,12 @@ public abstract class eBotsOpMode extends LinearOpMode {
         }
     }
 
-    public boolean moveByDistance(double inchesForward, double inchesLateral, double rotationAngle, ArrayList<DcMotor> motors){
-        //  For this method, forward travel is relative to robot heading at start of move
-        //  For spin, positive spin is towards right, negative spin is towards left
+    public boolean moveByDistance(double inchesForward, double inchesLateral,
+                                  double rotationAngleGyroOriented, ArrayList<DcMotor> motors){
+        //  For this method, forward travel is relative to robot heading of heading 0 (gyro initialize position)
+        //  For rotationAngleGyroOriented, positive spin is towards left, negative spin is towards right
+        //  NOTE:  this spin is opposite of other occurrences in this app, but in alignment with gyro
+        //  It requires a change in how the spin affects drive vectors
         //  Wheel orientation assumes X orientation when looking from above down to ground plane
 
 
@@ -532,22 +535,37 @@ public abstract class eBotsOpMode extends LinearOpMode {
         double wheelDiameter = 3.0;
         double wheelDiagonalSpacing = 21.3;
         double peakRobotSpeed = 30;  //peak robot speed in inches per second
+        // This is net speed in forward or sideways direction, but wheels must travel faster due to slippage
+        // So apply correction factor by dividing by cos(wheelAngle), or cos(pi/4) for pure slip condition
+        // However, this variable will need to be verified.  Based on spin timing, assume no slip initially
+        //TODO:  Feather-in this slip factor
+        double wheelSlipFactor = Math.cos(0);  //  This could be as high as Math.cos(Math.PI/4)
+        double peakWheelSpeed = peakRobotSpeed / wheelSlipFactor;  //  in/s
+        double peakAngularVelocity = (2*peakWheelSpeed)/wheelDiagonalSpacing;
 
+        //Reduce this down to clicks/s
+        int peakClicksPerSecond = (int) ((peakWheelSpeed / (wheelDiameter*Math.PI)) * encoderClicksPerRevolution);
         double inchesPerRevolution = wheelDiameter * Math.PI;
         int encoderClicksPerInch = (int) Math.round(encoderClicksPerRevolution / inchesPerRevolution);
 
         double spinCircumference = wheelDiagonalSpacing * Math.PI;
-        double requiredSpinDistance = rotationAngle/360 * spinCircumference;  //distance in inches required for spin
+        double requiredSpinDistance = rotationAngleGyroOriented/360 * spinCircumference;  //distance in inches required for spin
+        int encoderClicksForFullSpin = (int) ((requiredSpinDistance / (wheelDiameter*Math.PI))*encoderClicksPerRevolution);
 
         //Calculate wheel revolution distance for travel
-        double robotAngle = Math.atan2(inchesForward, inchesLateral) - (Math.PI/4);   //  Angle used for mecanum drive vector
+        //Note that Gyro Zero defines orientation of positive X direction
+        //Therefore the atan2 function in this routine uses the lateral for the (first) y component and forward is (second) x
+        //And to calculate robot angle, use driveAngle - currentHeading + wheelAngle (pi/4)
+        double driveAngle = Math.atan2(inchesLateral,inchesForward);   //  Angle used for mecanum drive vector
+        getCurrentHeading();  //Refreshes the currentHeading class attribute
+        double robotAngle = driveAngle - currentHeading + Math.PI/4;
         double travelDistance = Math.sqrt(Math.pow(inchesForward,2) + Math.pow(inchesLateral,2));
 
-        //Set the target heading.  Note that rotationAngle is positive if to right, which is opposite imu direction
-        //That is why rotationAngle is subtracted from currentHeading
+        //Set the target heading.  Note that rotationAngleGyroOriented is positive if to left (same as gyro)
+        //That is why rotationAngleGyroOriented is added to currentHeading
         //Also note that the target heading can have abs value greater than 180, which may be a problem later
-        currentHeading = getCurrentHeading();  //Refresh the current heading
-        double targetHeading = currentHeading-rotationAngle;
+        getCurrentHeading();  //Refresh the current heading
+        double targetHeading = currentHeading+rotationAngleGyroOriented;
 
         //Deal with angle overflow (abs(angle)>180)
         if (targetHeading > 180){
@@ -561,7 +579,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         double[] driveValues = new double[4];
         calculateDriveVector(1,robotAngle,0,driveValues);
 
-        //Now using the drive values, drive distances can be calculated
+        //Using the drive values, drive distances can be calculated
         //This is based on the principle that the wheel rotation is generally greater than straight line
         //For instance, if traveling forward, the drive value is 0.707
         //and the drive distance for 10in travel is 10/0.707 = 14.1
@@ -570,9 +588,10 @@ public abstract class eBotsOpMode extends LinearOpMode {
         for (int i=0; i<4; i++){
             driveDistances[i] = travelDistance/driveValues[i];
 
-            //Now, if the robot is spinning, must add the spin distance
-            //Based on wheel configuration, spin is added respectively [FL, FR, BL, FR] --> [1, -1, 1, -1]
-            int motorRotationSign =  (i%2 == 0) ? 1 : -1;  //Add for entries 0 and 2, subtract for 1 and 3
+            //If the robot is spinning, must add the spin distance
+            //Based on wheel configuration, spin is added respectively [FL, FR, BL, FR] --> [-1, 1, -1, 1]  NOTE:  reversed from calculate drive vectors due to opposite spin direction
+            int motorRotationSign=1;
+            if (i==0 | i==2) {motorRotationSign =  -1;}  //subtract for index 0 and 2, add for 1 and 3
             driveDistances[i] = driveDistances[i]+(requiredSpinDistance*motorRotationSign);
 
             //Convert the distances to encoder targets
@@ -588,14 +607,23 @@ public abstract class eBotsOpMode extends LinearOpMode {
 
         //  Find the max distance traveled and determine expected travel time
         double maxDistance = findMaxAbsValue(driveDistances);
-        double expectedTravelTime = maxDistance / peakRobotSpeed;
+        double expectedTravelTime = (travelDistance/peakWheelSpeed) +
+                (Math.PI * Math.abs(rotationAngleGyroOriented))/(180*peakAngularVelocity);  //time in seconds
+
+
+        //With time of travel know, apply a constant spin rate
+        //Calculate the % of power allocated to spinning
+        double spinPowerPercentage = (Math.PI * Math.abs(rotationAngleGyroOriented))/
+                (180 * expectedTravelTime * peakAngularVelocity);
+        double translationPowerPercentage = 1-spinPowerPercentage;
+
 
         //Now that the distances are know for each wheel, determine drive vectors
-        //  Assume that the motor speed is linearly proportional from 0-0.85
-        double maxTargetDriveValue = 0.85;  //Max motor power
-        double minPowerThreshold = 0.15;     //Min motor power
-        double distanceDriveScaleFactor = maxTargetDriveValue / maxDistance;
-        if (maxDistance > maxTargetDriveValue) scaleDrive(distanceDriveScaleFactor, driveDistances);  //Scale drive
+        //  Assume that the motor speed is linearly proportional from MIN TO MAX [0.2-0.85]
+        double maxPower = 0.85;  //Max motor power
+        double minPowerThreshold = 0.2;     //Min motor power
+        double distanceDriveScaleFactor = maxPower / maxDistance;
+        if (maxDistance > maxPower) scaleDrive(distanceDriveScaleFactor, driveDistances);  //Scale drive
         //If drive power too low, zero it out and also zero the corresponding encoder target
         //Note that after scaling, driveDistances is the vector for motor power
         for (int i=0; i<driveDistances.length; i++) {
@@ -684,6 +712,8 @@ public abstract class eBotsOpMode extends LinearOpMode {
             if (minClicksFromTarget < targetPositionAccuracy) driveStepPositionReached = true;
             if ((System.nanoTime() / 1000000) > driveStepEndTime) driveStepTimedOut = true;
             getCurrentHeading();
+            
+            telemetry.addData("Calculated Travel Time", expectedTravelTime);
             telemetry.addData("target value0", encoderTargetValues[0]);
             telemetry.addData("target value1", encoderTargetValues[1]);
             telemetry.addData("target value2", encoderTargetValues[2]);
