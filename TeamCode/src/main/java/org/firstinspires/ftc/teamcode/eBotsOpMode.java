@@ -296,6 +296,24 @@ public abstract class eBotsOpMode extends LinearOpMode {
         //Divide all drive values by the max value to achieve a new max value of 1
         if (maxValue > 1) scaleDrive(1/maxValue, outputArray);
     }
+    private static void calculateFieldOrientedDriveVector(double driveAngle ,double heading ,double drivePower, double[] outputArray){
+        //This calculation returns drive vectors but relies on field orientated vectors
+        //for driveAngle and currentHeading
+        //Importantly, the rotationAngleGyroOriented is consistent with gyro, positive is spin to left
+        //This doesn't calculate spin
+        //[Element] --> Wheel
+        //  [0] --> Front Left
+        //  [1] --> Front Right
+        //  [2] --> Back Left
+        //  [3] --> Back Right
+        double robotAngle = driveAngle - heading + Math.PI/4;
+        outputArray[0] = Math.cos(robotAngle) * drivePower;
+        outputArray[1] = Math.sin(robotAngle) * drivePower;
+        outputArray[2] = Math.sin(robotAngle) * drivePower;
+        outputArray[3] = Math.cos(robotAngle) * drivePower;
+
+        //Don't scale the drive vector
+    }
 
     private static void scaleDrive (double scaleFactor, double[] driveArray){
         for (int i=0; i<driveArray.length; i++) {
@@ -520,10 +538,13 @@ public abstract class eBotsOpMode extends LinearOpMode {
                                   double rotationAngleGyroOriented, ArrayList<DcMotor> motors){
         //  For this method, forward travel is relative to robot heading of heading 0 (gyro initialize position)
         //  For rotationAngleGyroOriented, positive spin is towards left, negative spin is towards right
+        //  Units for rotationAngleGyroOriented is Radians
         //  NOTE:  this spin is opposite of other occurrences in this app, but in alignment with gyro
         //  It requires a change in how the spin affects drive vectors
         //  Wheel orientation assumes X orientation when looking from above down to ground plane
 
+        //  Convert units for rotationAngleGyroOriented to radians if greater than 2*pi, assume it was passed as degrees
+        if (rotationAngleGyroOriented>(2*Math.PI)) rotationAngleGyroOriented= Math.toRadians(rotationAngleGyroOriented);
 
         //Analyze the move and determine how much distance each wheel must travel
         //  Calculate the drive power vector for the motors
@@ -532,41 +553,36 @@ public abstract class eBotsOpMode extends LinearOpMode {
 
         //Initialize variables for drive distance calculations
         int encoderClicksPerRevolution = NEVEREST_40_CPR;
-        double wheelDiameter = 3.0;
+        double wheelDiameter = 4.0;
         double wheelDiagonalSpacing = 21.3;
         double peakRobotSpeed = 30;  //peak robot speed in inches per second
+        double wheelAngle = Math.PI/4;
         // This is net speed in forward or sideways direction, but wheels must travel faster due to slippage
         // So apply correction factor by dividing by cos(wheelAngle), or cos(pi/4) for pure slip condition
         // However, this variable will need to be verified.  Based on spin timing, assume no slip initially
         //TODO:  Feather-in this slip factor
         double wheelSlipFactor = Math.cos(0);  //  This could be as high as Math.cos(Math.PI/4)
-        double peakWheelSpeed = peakRobotSpeed / wheelSlipFactor;  //  in/s
-        double peakAngularVelocity = (2*peakWheelSpeed)/wheelDiagonalSpacing;
-
-        //Reduce this down to clicks/s
-        int peakClicksPerSecond = (int) ((peakWheelSpeed / (wheelDiameter*Math.PI)) * encoderClicksPerRevolution);
-        double inchesPerRevolution = wheelDiameter * Math.PI;
-        int encoderClicksPerInch = (int) Math.round(encoderClicksPerRevolution / inchesPerRevolution);
-
-        double spinCircumference = wheelDiagonalSpacing * Math.PI;
-        double requiredSpinDistance = rotationAngleGyroOriented/360 * spinCircumference;  //distance in inches required for spin
-        int encoderClicksForFullSpin = (int) ((requiredSpinDistance / (wheelDiameter*Math.PI))*encoderClicksPerRevolution);
+        double peakWheelSpeedInchesPerS = peakRobotSpeed / wheelSlipFactor;  //  in/s
+        int peakWheelSpeedClicksPerS = (int) Math.round((peakWheelSpeedInchesPerS / (Math.PI*wheelDiameter))*encoderClicksPerRevolution);  //  clicks/s
+        int effectiveClicksPerInch = (int) Math.round(peakWheelSpeedClicksPerS/peakRobotSpeed);
+        double peakAngularVelocity = (2*peakWheelSpeedInchesPerS)/wheelDiagonalSpacing;
 
         //Calculate wheel revolution distance for travel
         //Note that Gyro Zero defines orientation of positive X direction
         //Therefore the atan2 function in this routine uses the lateral for the (first) y component and forward is (second) x
-        //And to calculate robot angle, use driveAngle - currentHeading + wheelAngle (pi/4)
+        //And to calculate robot angle, use driveAngle - currentHeading + wheelAngle (or pi/4)
         double driveAngle = Math.atan2(inchesLateral,inchesForward);   //  Angle used for mecanum drive vector
         getCurrentHeading();  //Refreshes the currentHeading class attribute
-        double robotAngle = driveAngle - currentHeading + Math.PI/4;
+        //To handle crossover between driveAngle and currentHeading, use the checkHeadingVersusTarget function
+        //And then add wheelAngle to that
         double travelDistance = Math.sqrt(Math.pow(inchesForward,2) + Math.pow(inchesLateral,2));
 
         //Set the target heading.  Note that rotationAngleGyroOriented is positive if to left (same as gyro)
         //That is why rotationAngleGyroOriented is added to currentHeading
         //Also note that the target heading can have abs value greater than 180, which may be a problem later
-        getCurrentHeading();  //Refresh the current heading
         double targetHeading = currentHeading+rotationAngleGyroOriented;
 
+        //TODO:  Can this be replaced with checkHeadingVersusTarget?
         //Deal with angle overflow (abs(angle)>180)
         if (targetHeading > 180){
             targetHeading = -180 - (180-targetHeading);  //subtracting a negative number from -180 reduces magnitude
@@ -574,19 +590,50 @@ public abstract class eBotsOpMode extends LinearOpMode {
             targetHeading = 180-(-180-targetHeading);  //note targetHeading is negative and larger magnitude, resulting in positive number
         }
 
+        //  t=(wheelDiam / peakWheelSpeedInchesPerS) + ((rotationAngleGyroOriented)/(peakAngularVelocity)
+        double expectedTravelTime = (wheelDiameter/peakWheelSpeedInchesPerS) + ((Math.PI * rotationAngleGyroOriented)/
+                (180 * peakAngularVelocity));
+        //Based on robot peak speeds, allocate power ratios to the rotate and translate operations
+        double spinPower = Math.abs(rotationAngleGyroOriented)/(expectedTravelTime*peakAngularVelocity);
+        double drivePower = 1-spinPower;
+        double rotationRateForDriveStep = rotationAngleGyroOriented/expectedTravelTime;
+        double requiredSpinDistance = wheelDiagonalSpacing/2 * rotationAngleGyroOriented;  //s=r*theta
+        //TODO:  COMPLETE FROM HERE
         //Note, drive values assume the following order of wheels  [FL, FR, BL, BR]
         //  This calculation is used to determine distances, and isn't the final calc for motors
         double[] driveValues = new double[4];
-        calculateDriveVector(1,robotAngle,0,driveValues);
+        //Note that the driveValues already have the drivePower scale factor considered
+        calculateFieldOrientedDriveVector(driveAngle,currentHeading,drivePower,driveValues);
 
         //Using the drive values, drive distances can be calculated
-        //This is based on the principle that the wheel rotation is generally greater than straight line
-        //For instance, if traveling forward, the drive value is 0.707
-        //and the drive distance for 10in travel is 10/0.707 = 14.1
-        double[] driveDistances = new double[4];
-        int[] encoderTargetValues = new int[4];
+        //First figure out the length that each wheel must travel to translate
+        //Then add the distance required to spin
+        double[] driveDistances = new double[4];    //Array to capture the distance values in inches
+        int[] encoderTargetValues = new int[4];     //Array to capture encoder clicks
         for (int i=0; i<4; i++){
-            driveDistances[i] = travelDistance/driveValues[i];
+            //First get the coefficients, which are calculated differently if spin is included
+            if(rotationAngleGyroOriented==0) {
+                driveDistances[i] = driveValues[i]*expectedTravelTime;
+            }else{
+                double coef_1;
+                double coef_2;
+                double termInsideOperand_1 = -(rotationRateForDriveStep * expectedTravelTime) + driveAngle + wheelAngle;
+                double termInsideOperand_2 = driveAngle + wheelAngle;
+                if (i == 0 | i == 3) {
+                    coef_1 = -Math.sin(termInsideOperand_1) / rotationRateForDriveStep;
+                    coef_2 = -Math.sin(termInsideOperand_2) / rotationRateForDriveStep;
+
+                } else {
+                    coef_1 = Math.cos(termInsideOperand_1) / rotationRateForDriveStep;
+                    coef_2 = Math.cos(termInsideOperand_2) / rotationRateForDriveStep;
+                }
+                driveDistances[i] = coef_1 - coef_2;
+            }
+
+            //Multiply the coefficients to determine drive distances
+            //Note:  time element of the distance is already included in the coefficient
+            //      Also, the drivePower has been factored in when calculating driveValues
+            driveDistances[i] = driveDistances[i] * peakWheelSpeedInchesPerS;
 
             //If the robot is spinning, must add the spin distance
             //Based on wheel configuration, spin is added respectively [FL, FR, BL, FR] --> [-1, 1, -1, 1]  NOTE:  reversed from calculate drive vectors due to opposite spin direction
@@ -595,43 +642,16 @@ public abstract class eBotsOpMode extends LinearOpMode {
             driveDistances[i] = driveDistances[i]+(requiredSpinDistance*motorRotationSign);
 
             //Convert the distances to encoder targets
-            //TODO:  Verify the signs for each motor based on spin direction
+            //  Verify the signs for each motor based on spin direction
             //  Front motors increase clicks with positive power
             //  Rear motors decrease clicks with positive power
-            encoderTargetValues[i] = (int) driveDistances[i] * encoderClicksPerInch;
+            encoderTargetValues[i] = (int) (driveDistances[i] * effectiveClicksPerInch);
             if(i==2 | i==3){
                 //Reverse the sign for back motors
                 encoderTargetValues[i] *= -1;
             }
         }
 
-        //  Find the max distance traveled and determine expected travel time
-        double maxDistance = findMaxAbsValue(driveDistances);
-        double expectedTravelTime = (travelDistance/peakWheelSpeed) +
-                (Math.PI * Math.abs(rotationAngleGyroOriented))/(180*peakAngularVelocity);  //time in seconds
-
-
-        //With time of travel know, apply a constant spin rate
-        //Calculate the % of power allocated to spinning
-        double spinPowerPercentage = (Math.PI * Math.abs(rotationAngleGyroOriented))/
-                (180 * expectedTravelTime * peakAngularVelocity);
-        double translationPowerPercentage = 1-spinPowerPercentage;
-
-
-        //Now that the distances are know for each wheel, determine drive vectors
-        //  Assume that the motor speed is linearly proportional from MIN TO MAX [0.2-0.85]
-        double maxPower = 0.85;  //Max motor power
-        double minPowerThreshold = 0.2;     //Min motor power
-        double distanceDriveScaleFactor = maxPower / maxDistance;
-        if (maxDistance > maxPower) scaleDrive(distanceDriveScaleFactor, driveDistances);  //Scale drive
-        //If drive power too low, zero it out and also zero the corresponding encoder target
-        //Note that after scaling, driveDistances is the vector for motor power
-        for (int i=0; i<driveDistances.length; i++) {
-            if(Math.abs(driveDistances[i])<minPowerThreshold) {
-                driveDistances[i]=0;
-                encoderTargetValues[i] = 0;
-            }
-        }
 
         //Perform the drives step
         //  Control the acceleration at the beginning to minimize slippage
@@ -642,77 +662,89 @@ public abstract class eBotsOpMode extends LinearOpMode {
         //Now get prepared to move
         //  But before that, look at where we are relative to target position
         //  Use the min relative position to determine the drive scale factor
-        int transientBuffer = encoderClicksPerRevolution * 1;  //Scale the drive values over this range
+        //TODO:  Include cosideration for steep angles where 1 wheel may only spin 1 revolution
+        int transientBuffer = encoderClicksPerRevolution * 1;  //Scale the drive values within this range
         zeroDriveMotorEncoders(motors);
         int[] currentMotorPositions = new int[4];
         getMotorPositions(currentMotorPositions, motors);
-        int maxClicksFromStart = findMaxAbsValue(currentMotorPositions);
-        int minClicksFromTarget = getNumClicksFromTarget(currentMotorPositions,encoderTargetValues);
-        int positionForScaleFactor = (maxClicksFromStart<minClicksFromTarget) ? maxClicksFromStart : minClicksFromTarget;
 
         //determine the drive motor scale factor
         //  this is a number between the minPowerScale and 1 that varies
         //  with the position within the transient range
         double minPowerScale = 0.5;
-        double driveScaleFactor = ((1-minPowerScale)/transientBuffer) * (transientBuffer-positionForScaleFactor);
+        //During initial acceleration, the driveScaleFactor = minPowerScale
+        double driveScaleFactor = minPowerScale;
         double[] scaledDriveVector = new double[4];
+
+        //TODO: Fix drive vector calculation
         for (int i=0; i<scaledDriveVector.length; i++){
-            scaledDriveVector[i] = driveDistances[i] * driveScaleFactor;
+            scaledDriveVector[i] = driveValues[i] * driveScaleFactor;
             motors.get(i).setPower(scaledDriveVector[i]);
         }
 
-        //Setup some controls to manage the amount of time taken during a drive step
+        //Setup some controls to manage drive step exit conditions
+        //Create variables to evaluate position accuracy to target
         int targetPositionAccuracy = 50;
         boolean driveStepPositionReached = false;
+        //Create variables to capture timeout
         long driveStepEndTime = (System.nanoTime() / 1000000);  //current time in milliseconds
-        long driveStepTimeBuffer = 5000;  //Buffer time in milliseconds for transient
+        long driveStepTimeBuffer = 3500;  //Buffer time in milliseconds for transient
         driveStepEndTime = driveStepEndTime + (long)(expectedTravelTime*1000) + driveStepTimeBuffer;
         boolean driveStepTimedOut = false;
+        //Create variables to capture overshoot condition
         int consecutiveCyclesWithIncreasingError = 0;
-        int previousPositionError = maxClicksFromStart;
+        int previousPositionError = getNumClicksFromTarget(currentMotorPositions,encoderTargetValues);
         int overshootCycleCountLimit = 7;
         boolean driveStepOvershootDetected = false;
 
-        while (!driveStepPositionReached  //If encoder is within this many clicks
+        int currentPositionError;
+        int maxClicksFromStart;
+        int minClicksFromTarget;
+        int positionForScaleFactor;
+
+        while (opModeIsActive() && !driveStepPositionReached  //If encoder is within this many clicks
                 & !driveStepTimedOut  //Or it takes too much time
                 //& !driveStepOvershootDetected
                 ){  //Or going to wrong way
 
             //Get current positions
             getMotorPositions(currentMotorPositions, motors);
-
+            currentPositionError = getNumClicksFromTarget(currentMotorPositions, encoderTargetValues);
             //Determine scale factor
             maxClicksFromStart = findMaxAbsValue(currentMotorPositions);
             minClicksFromTarget = getNumClicksFromTarget(currentMotorPositions, encoderTargetValues);
             positionForScaleFactor = (maxClicksFromStart < minClicksFromTarget) ? maxClicksFromStart : minClicksFromTarget;
 
             //See if position error has decreased from last cycle
-            if(maxClicksFromStart > previousPositionError){
+            if(currentPositionError > previousPositionError){
                 consecutiveCyclesWithIncreasingError ++;
                 if (consecutiveCyclesWithIncreasingError > overshootCycleCountLimit) driveStepOvershootDetected = true;
             }else{
                 consecutiveCyclesWithIncreasingError=0;
             }
 
-            previousPositionError = maxClicksFromStart;
+            previousPositionError = currentPositionError;
 
             if (positionForScaleFactor < transientBuffer) {
                 driveScaleFactor = ((1 - minPowerScale) / transientBuffer) * (transientBuffer - positionForScaleFactor);
+                driveScaleFactor = 1-driveScaleFactor;
             } else {
                 driveScaleFactor = 1;
             }
 
             //Calculate new drive vector and set motor power
+            getCurrentHeading();
+            calculateFieldOrientedDriveVector(driveAngle, currentHeading, drivePower, driveValues);
+
             for (int i = 0; i < scaledDriveVector.length; i++) {
-                scaledDriveVector[i] = driveDistances[i] * driveScaleFactor;
+                scaledDriveVector[i] = driveValues[i] * driveScaleFactor;
                 motors.get(i).setPower(scaledDriveVector[i]);
             }
 
             //Check if position reached or step has timed out
             if (minClicksFromTarget < targetPositionAccuracy) driveStepPositionReached = true;
             if ((System.nanoTime() / 1000000) > driveStepEndTime) driveStepTimedOut = true;
-            getCurrentHeading();
-            
+
             telemetry.addData("Calculated Travel Time", expectedTravelTime);
             telemetry.addData("target value0", encoderTargetValues[0]);
             telemetry.addData("target value1", encoderTargetValues[1]);
@@ -762,6 +794,8 @@ public abstract class eBotsOpMode extends LinearOpMode {
     }
 
     private int getNumClicksFromTarget(int[] currentMotorPositions, int[] encoderTargetValues) {
+        //returns the minimum error from the target encoder value
+
         int[] clicksFromTarget = new int[4];
         int dummyClickValue = 5000;
         for(int i=0; i<currentMotorPositions.length; i++) {
