@@ -11,18 +11,18 @@ import java.util.ArrayList;
 @Autonomous
 public class Auton_Crater_BETA extends eBotsOpMode {
 
-    private void executeDepotLeftAuton(ArrayList<DcMotor> motorList){
+    private void executeCraterLeftAuton(ArrayList<DcMotor> motorList){
         long endTimer = 0;
 
-        double [] sampleLeftMove1 = new double[] {20, -30, -(Math.PI*3)/6};
-        double [] sampleLeftMove2 = new double[] {1, -35, -(Math.PI*1)/6};
-        double [] sampleLeftMove3 = new double[] {0.5, 0.5, 0};
-        double [] sampleLeftMove4 = new double[] {.5,-0.5,0};
-        double [] sampleLeftMove5 = new double[] {2,2,0};
-        double sampleLeftTurn1 = -135;
+        double [] sampleLeftMove1 = new double[] {34, -72, (Math.PI)/4};
+        double [] sampleLeftMove2 = new double[] {40,40,0};
+        double [] sampleLeftMove3 = new double[] {-20,-20,Math.PI};
+        double [] sampleLeftMove4 = new double[] {-55,-55,0};
+        double sampleLeftTurn1 = 45;
         double sampleLeftTurn2 = 45;
-        double sampleLeftTurn3 = 55;
+        double sampleLeftTurn3 = -135;
         double sampleLeftTurn4 = 47;
+        double sampleLeftTurn5 = 41;
 
         //Move to Sample
         moveByDistance(sampleLeftMove1[0],sampleLeftMove1[1],sampleLeftMove1[2],motorList,"TimedTranslateAndSpin");
@@ -30,40 +30,31 @@ public class Auton_Crater_BETA extends eBotsOpMode {
         //Lower the latch
         lowerLatchToDrivePosition();
 
-        //Push sample to depot
+        //straighten for drive
+        //turnToFieldHeading(sampleLeftTurn4, motorList);  //now align for the drive
+
+        //drive to depot
         moveByDistance(sampleLeftMove2[0],sampleLeftMove2[1],sampleLeftMove2[2],motorList,"TimedTranslateAndSpin");
 
-        //Align for turn back
-        turnToFieldHeading(sampleLeftTurn1, motorList);
+        //straighten to claim and drive drive
+        turnToFieldHeading(sampleLeftTurn5, motorList);  //now align for the drive
 
-        //move back a little
-        moveByDistance(sampleLeftMove3[0],sampleLeftMove3[1],sampleLeftMove3[2],motorList,"TimedTranslateAndSpin");
         //wait for claiming
         endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
         while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
 
         }
-        //turn for crater drive
-        turnToFieldHeading(sampleLeftTurn2, motorList);
+        //start moving back and turn around
+        //moveByDistance(sampleLeftMove3[0],sampleLeftMove3[1],sampleLeftMove3[2],motorList,"TimedTranslateAndSpin");
 
-        //push against wall
-        moveByDistance(sampleLeftMove4[0],sampleLeftMove4[1],sampleLeftMove4[2],motorList,"TimedTranslateAndSpin");
-
-        //straighten for drive
         turnToFieldHeading(sampleLeftTurn3, motorList);  //overspin away from the wall
-        turnToFieldHeading(sampleLeftTurn4, motorList);  //now align for the drive
 
         //drive to crater
-        moveByDistance(sampleLeftMove5[0],sampleLeftMove5[1],sampleLeftMove5[2],motorList,"TimedTranslateAndSpin");
-
-        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
-
-        }
+        moveByDistance(sampleLeftMove4[0],sampleLeftMove4[1],sampleLeftMove4[2],motorList,"TimedTranslateAndSpin");
 
     }
 
-    private void executeDepotRightAuton(ArrayList<DcMotor> motorList){
+    private void executeCraterRightAuton(ArrayList<DcMotor> motorList){
         long endTimer = 0;
 
         double [] sampleRightMove1 = new double[] {-23, -31, -(Math.PI*3)/6};
@@ -115,7 +106,7 @@ public class Auton_Crater_BETA extends eBotsOpMode {
         }
 
     }
-    private void executeDepotCenterAuton(ArrayList<DcMotor> motorList){
+    private void executeCraterCenterAuton(ArrayList<DcMotor> motorList){
         long endTimer = 0;
 
         double [] sampleCenterMove1 = new double[] {-3, -31, -(Math.PI*3)/6};
@@ -202,11 +193,11 @@ public class Auton_Crater_BETA extends eBotsOpMode {
         goldPosition=landAndLocateGoldMineral();
 
         if(goldPosition == GoldPosition.LEFT){
-            executeDepotLeftAuton(motorList);
+            executeCraterLeftAuton(motorList);
         }else if(goldPosition == GoldPosition.RIGHT){
-            executeDepotRightAuton(motorList);
+            executeCraterRightAuton(motorList);
         }else  {        //CENTER or UNKNOWN
-            executeDepotCenterAuton(motorList);
+            executeCraterCenterAuton(motorList);
         }
 
         latchMotor.setTargetPosition(0);

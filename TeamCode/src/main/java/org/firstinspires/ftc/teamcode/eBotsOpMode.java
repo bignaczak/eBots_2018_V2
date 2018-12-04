@@ -526,7 +526,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     }
     private void stopMotors(ArrayList<DcMotor> motors) {
 
-        long stopTime = 300;
+        long stopTime = 150;
         long currentTime = System.nanoTime() / 1000000;
         for (long t = currentTime; t < (currentTime + stopTime); t = (System.nanoTime() / 1000000)) {
             for (DcMotor m : motors) {
