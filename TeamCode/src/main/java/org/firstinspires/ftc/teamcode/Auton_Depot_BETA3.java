@@ -55,33 +55,56 @@ public class Auton_Depot_BETA3 extends eBotsOpMode {
         waitForStart();
         // Start the logging of measured acceleration
         //imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+        boolean wasMoveSuccessful;
+        long endTimer = 0;
+//        wasMoveSuccessful = moveByDistance(24,0,0,motorList);
+//
+//        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
+/*        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
+//            telemetry.addData("success?", wasMoveSuccessful);
+//            telemetry.addData("Position0", motorList.get(0).getCurrentPosition());
+//            telemetry.addData("Position1", motorList.get(1).getCurrentPosition());
+//            telemetry.addData("Position2", motorList.get(2).getCurrentPosition());
+//            telemetry.addData("Position3", motorList.get(3).getCurrentPosition());
+//            telemetry.addData("Heading", getCurrentHeading());
+//            telemetry.update();
+        }*/
 
-        boolean wasMoveSuccessful = moveByDistance(24,0,0,motorList);
+//        wasMoveSuccessful = moveByDistance(-24,0,0,motorList);
+//
+//        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
+//        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
+////            telemetry.addData("success?", wasMoveSuccessful);
+////            telemetry.addData("Position0", motorList.get(0).getCurrentPosition());
+////            telemetry.addData("Position1", motorList.get(1).getCurrentPosition());
+////            telemetry.addData("Position2", motorList.get(2).getCurrentPosition());
+////            telemetry.addData("Position3", motorList.get(3).getCurrentPosition());
+////            telemetry.addData("Heading", getCurrentHeading());
+////            telemetry.update();
+//        }
 
-        long endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer){
-            telemetry.addData("success?", wasMoveSuccessful);
-            telemetry.addData("Position0", motorList.get(0).getCurrentPosition());
-            telemetry.addData("Position1", motorList.get(1).getCurrentPosition());
-            telemetry.addData("Position2", motorList.get(2).getCurrentPosition());
-            telemetry.addData("Position3", motorList.get(3).getCurrentPosition());
-            telemetry.addData("Heading", getCurrentHeading());
-            telemetry.update();
+        wasMoveSuccessful = moveByDistance(24,0,45,motorList,"Debug");
+
+        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
+        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
+
         }
+//        wasMoveSuccessful = moveByDistance(-24,0,-45,motorList);
+//        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
+//        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
+//        }
 
-        wasMoveSuccessful = moveByDistance(-24,0,0,motorList);
 
-        endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer){
-            telemetry.addData("success?", wasMoveSuccessful);
-            telemetry.addData("Position0", motorList.get(0).getCurrentPosition());
-            telemetry.addData("Position1", motorList.get(1).getCurrentPosition());
-            telemetry.addData("Position2", motorList.get(2).getCurrentPosition());
-            telemetry.addData("Position3", motorList.get(3).getCurrentPosition());
-            telemetry.addData("Heading", getCurrentHeading());
-            telemetry.update();
-        }
+        turnToFieldHeading(0, motorList);
 
+//        wasMoveSuccessful = moveByDistance(-24,0,0,motorList);
+//
+//        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
+//        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
+//        }
+
+
+/*
         wasMoveSuccessful = moveByDistance(0,0,90,motorList);
 
         endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
@@ -107,6 +130,7 @@ public class Auton_Depot_BETA3 extends eBotsOpMode {
             telemetry.addData("Heading", getCurrentHeading());
             telemetry.update();
         }
+*/
 
 
 

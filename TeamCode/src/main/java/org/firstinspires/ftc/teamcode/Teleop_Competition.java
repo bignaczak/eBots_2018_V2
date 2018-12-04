@@ -181,6 +181,10 @@ public class Teleop_Competition extends LinearOpMode {
         motorList.add(backLeft);
         motorList.add(backRight);
 
+        for (DcMotor m: motorList){
+            m.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            m.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
 
         telemetry.addData("Status", "Motor Power Set, Ready");
         telemetry.update();
@@ -231,7 +235,7 @@ public class Teleop_Competition extends LinearOpMode {
         boolean encoderSafetyOverride = false;
         final int encoderCountSafetyBuffer = 1000;
         final double motorThrottleDownSpeed = 0.5;
-        double spinScaleFactor = 0.3;
+        double spinScaleFactor = 0.4;
 
         zeroArmEncodersOnTheFly(ARM_ANGLE_TRAVEL_POSITION, ARM_EXTENSION_COLLECTION_POSITION);
 
