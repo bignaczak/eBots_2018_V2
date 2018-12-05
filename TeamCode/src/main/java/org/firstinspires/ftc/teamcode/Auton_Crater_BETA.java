@@ -14,10 +14,13 @@ public class Auton_Crater_BETA extends eBotsOpMode {
     private void executeCraterLeftAuton(ArrayList<DcMotor> motorList){
         long endTimer = 0;
 
-        double [] sampleLeftMove1 = new double[] {34, -72, (Math.PI)/4};
-        double [] sampleLeftMove2 = new double[] {40,40,0};
-        double [] sampleLeftMove3 = new double[] {-20,-20,Math.PI};
-        double [] sampleLeftMove4 = new double[] {-55,-55,0};
+        double [] sampleLeftMove1 = new double[] {20, -30, -(Math.PI*3)/6};
+        double [] sampleLeftMove2 = new double[] {0, -2, 0};  //simple sample move
+        double [] sampleLeftMove3 = new double[] {24,10,0};  //pull it back and spin
+        double [] sampleLeftMove4 = new double[] {20,20,0};     //drive to depot
+        //double [] sampleLeftMove1 = new double[] {34, -72, (Math.PI)/4};  //Spin move to sample with back wheel
+        //double [] sampleLeftMove2 = new double[] {40,40,0};  This goes to depot
+        double [] sampleLeftMove5 = new double[] {-55,-55,0};
         double sampleLeftTurn1 = 45;
         double sampleLeftTurn2 = 45;
         double sampleLeftTurn3 = -135;
@@ -29,31 +32,82 @@ public class Auton_Crater_BETA extends eBotsOpMode {
 
         //Lower the latch
         lowerLatchToDrivePosition();
+        //Sample
+        moveByDistance(sampleLeftMove2[0],sampleLeftMove2[1],sampleLeftMove2[2],motorList,"TimedTranslateAndSpin");
+        //Pull back and spin
+        moveByDistance(sampleLeftMove3[0],sampleLeftMove3[1],sampleLeftMove3[2],motorList,"TimedTranslateAndSpin");
 
         //straighten for drive
-        //turnToFieldHeading(sampleLeftTurn4, motorList);  //now align for the drive
+        turnToFieldHeading(55,motorList);
+        turnToFieldHeading(47,motorList);
 
-        //drive to depot
-        moveByDistance(sampleLeftMove2[0],sampleLeftMove2[1],sampleLeftMove2[2],motorList,"TimedTranslateAndSpin");
+        //Drive to Depot
+        moveByDistance(sampleLeftMove4[0],sampleLeftMove4[1],sampleLeftMove4[2],motorList,"TimedTranslateAndSpin");
 
-        //straighten to claim and drive drive
-        turnToFieldHeading(sampleLeftTurn5, motorList);  //now align for the drive
+        //wait for claiming
+        endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
+        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
+
+
+        }
+
+        moveByDistance(sampleLeftMove5[0],sampleLeftMove5[1],sampleLeftMove5[2],motorList,"TimedTranslateAndSpin");
+
+
+    }
+
+    private void executeCraterCenterAuton(ArrayList<DcMotor> motorList){
+        long endTimer = 0;
+
+//        double [] sampleCenterMove1 = new double[] {-1.5, -38, (Math.PI)/4};
+//        double [] sampleCenterMove2 = new double[] {55, 5, -(Math.PI)/4};
+//        double [] sampleCenterMove3 = new double[] {25, 25, 0};
+//        double [] sampleCenterMove4 = new double[] {-55,-55,0};
+//        double [] sampleCenterMove5 = new double[] {5,5,0};
+        double sampleCenterTurn1 = 0;
+        double sampleCenterTurn2 = 45;
+        double sampleCenterTurn3 = -135;
+        double sampleCenterTurn4 =47;
+
+        double [] sampleCenterMove1 = new double[] {-3, -31, -(Math.PI*3)/6};
+        double [] sampleCenterMove2 = new double[] {0, -2, 0};  //simple sample move
+        double [] sampleCenterMove3 = new double[] {0,4,0};  //pull it back
+        double [] sampleCenterMove4 = new double[] {41,0,0};
+        double [] sampleCenterMove5 = new double[] {20,20,0};  //Drive to Depot
+        double [] sampleCenterMove6 = new double[] {-45,-45,0};
+
+        //Move to Sample
+        moveByDistance(sampleCenterMove1[0],sampleCenterMove1[1],sampleCenterMove1[2],motorList,"TimedTranslateAndSpin");
+        //Lower the latch
+        lowerLatchToDrivePosition();
+        //Sample
+        moveByDistance(sampleCenterMove2[0],sampleCenterMove2[1],sampleCenterMove2[2],motorList,"TimedTranslateAndSpin");
+        //Pull back and spin
+        moveByDistance(sampleCenterMove3[0],sampleCenterMove3[1],sampleCenterMove3[2],motorList,"TimedTranslateAndSpin");
+
+        //Spin to depot departure point
+        turnToFieldHeading(sampleCenterTurn1,motorList);
+        //Get ready to move to depot
+        moveByDistance(sampleCenterMove4[0],sampleCenterMove4[1],sampleCenterMove4[2],motorList,"TimedTranslateAndSpin");
+        //Spin to depot departure point
+        turnToFieldHeading(sampleCenterTurn2,motorList);
+
+        //Drive to Depot
+        moveByDistance(sampleCenterMove5[0],sampleCenterMove5[1],sampleCenterMove5[2],motorList,"TimedTranslateAndSpin");
 
         //wait for claiming
         endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
         while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
 
         }
-        //start moving back and turn around
-        //moveByDistance(sampleLeftMove3[0],sampleLeftMove3[1],sampleLeftMove3[2],motorList,"TimedTranslateAndSpin");
 
-        turnToFieldHeading(sampleLeftTurn3, motorList);  //overspin away from the wall
 
-        //drive to crater
-        moveByDistance(sampleLeftMove4[0],sampleLeftMove4[1],sampleLeftMove4[2],motorList,"TimedTranslateAndSpin");
+        //Drive to Depot
+        moveByDistance(sampleCenterMove6[0],sampleCenterMove6[1],sampleCenterMove6[2],motorList,"TimedTranslateAndSpin");
+
+
 
     }
-
     private void executeCraterRightAuton(ArrayList<DcMotor> motorList){
         long endTimer = 0;
 
@@ -106,58 +160,7 @@ public class Auton_Crater_BETA extends eBotsOpMode {
         }
 
     }
-    private void executeCraterCenterAuton(ArrayList<DcMotor> motorList){
-        long endTimer = 0;
 
-        double [] sampleCenterMove1 = new double[] {-3, -31, -(Math.PI*3)/6};
-        double [] sampleCenterMove2 = new double[] {0, -33, 0};
-        double [] sampleCenterMove3 = new double[] {0.5, 0.5, 0};
-        double [] sampleCenterMove4 = new double[] {.5,-0.5,0};
-        double [] sampleCenterMove5 = new double[] {5,5,0};
-        double sampleCenterTurn1 = -135;
-        double sampleCenterTurn2 = 45;
-        double sampleCenterTurn3 = 55;
-        double sampleCenterTurn4 =47;
-
-        //Move to Sample
-        moveByDistance(sampleCenterMove1[0],sampleCenterMove1[1],sampleCenterMove1[2],motorList,"TimedTranslateAndSpin");
-
-        //Lower the latch
-        lowerLatchToDrivePosition();
-
-        //Push to Depot
-        moveByDistance(sampleCenterMove2[0],sampleCenterMove2[1],sampleCenterMove2[2],motorList,"TimedTranslateAndSpin");
-
-        //Align for turn back
-        turnToFieldHeading(sampleCenterTurn1, motorList);
-
-        //move back a little
-        moveByDistance(sampleCenterMove3[0],sampleCenterMove3[1],sampleCenterMove3[2],motorList,"TimedTranslateAndSpin");
-        //wait for claiming
-        endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
-
-        }
-
-        //turn towards crater
-        turnToFieldHeading(sampleCenterTurn2, motorList);
-
-        //align with wall
-        moveByDistance(sampleCenterMove4[0],sampleCenterMove4[1],sampleCenterMove4[2],motorList,"TimedTranslateAndSpin");
-
-        //straighten for drive
-        turnToFieldHeading(sampleCenterTurn3, motorList);  //overspin away from the wall
-        turnToFieldHeading(sampleCenterTurn4, motorList);  //now align for the drive
-
-        //drive to crater
-        moveByDistance(sampleCenterMove5[0],sampleCenterMove5[1],sampleCenterMove5[2],motorList,"TimedTranslateAndSpin");
-
-        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
-
-        }
-
-    }
 
     @Override
     public void runOpMode(){
@@ -189,7 +192,7 @@ public class Auton_Crater_BETA extends eBotsOpMode {
 
 
         waitForStart();
-
+        //TODO:  FIX THE FIELD OF VIEW
         goldPosition=landAndLocateGoldMineral();
 
         if(goldPosition == GoldPosition.LEFT){

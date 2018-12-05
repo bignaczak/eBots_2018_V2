@@ -67,7 +67,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     static final int NEVEREST_20_CPR = 560;
 
     //final int ARM_EXTENSION_COLLECTION_POSITION = 27800;
-    final static int ARM_EXTENSION_COLLECTION_POSITION = -56880; //  54946 was observed in -57500;  //test position
+    final static int ARM_EXTENSION_COLLECTION_POSITION = -54920; //  54946 was observed in -57500;  //test position
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27800;
 
@@ -875,10 +875,54 @@ public abstract class eBotsOpMode extends LinearOpMode {
     }
 
     public void lowerLatchToDrivePosition(){
-        //latchMotor.setTargetPosition(LATCH_DRIVE_POSITION);
-        latchMotor.setTargetPosition(0);
+        latchMotor.setTargetPosition(LATCH_DRIVE_POSITION);
+        //latchMotor.setTargetPosition(0);
         latchMotor.setPower(0.5);
     }
+
+    public void moveArmToDumpPosition(){
+
+        armAngleMotor.setTargetPosition(ARM_ANGLE_DUMP_POSITION);
+        armAngleMotor.setPower(1);
+
+    }
+
+    public void extendArm(){
+        armExtensionMotor.setTargetPosition(ARM_EXTENSION_COLLECTION_POSITION);
+        armExtensionMotor.setPower(1);
+    }
+
+    public void waitForArmsToMove(){
+        while(opModeIsActive()
+                && (armExtensionMotor.isBusy() | armAngleMotor.isBusy())){
+            //Just wait
+        }
+    }
+
+    public void depositMarkerInDepot(ArrayList<DcMotor> motors){
+        long endTimer = System.nanoTime()/1000000 + 5000;//Set timer for 5 seconds
+
+        while(opModeIsActive()
+                && armAngleMotor.isBusy()
+                && System.nanoTime()/1000000<endTimer){
+            //Wait for the marker to be placed
+            //We could add a touch sensor here to improve timing
+            telemetry.update();
+        }
+        armAngleMotor.setPower(0);
+        //  b) Spit out the marker
+        collectMotor.setPower(-1);
+        long delayTime = 800;
+        performDriveStep(0, 0, 0, delayTime, motors);  //delay for a second
+        collectMotor.setPower(0);       //turn off the motor
+    }
+
+    public void moveArmtoTravelPosition(){
+        armAngleMotor.setTargetPosition(ARM_ANGLE_TRAVEL_POSITION);
+        armAngleMotor.setPower(1);
+
+    }
+
 
     public GoldPosition landAndLocateGoldMineral(){
         if (tfod != null) {

@@ -16,9 +16,9 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
 
         double [] sampleLeftMove1 = new double[] {20, -30, -(Math.PI*3)/6};
         double [] sampleLeftMove2 = new double[] {1, -35, -(Math.PI*1)/6};
-        double [] sampleLeftMove3 = new double[] {0.5, 0.5, 0};
+        double [] sampleLeftMove3 = new double[] {1, 1, 0};
         double [] sampleLeftMove4 = new double[] {.5,-0.5,0};
-        double [] sampleLeftMove5 = new double[] {2,2,0};
+        double [] sampleLeftMove5 = new double[] {40,40,0};
         double sampleLeftTurn1 = -135;
         double sampleLeftTurn2 = 45;
         double sampleLeftTurn3 = 55;
@@ -26,6 +26,10 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
 
         //Move to Sample
         moveByDistance(sampleLeftMove1[0],sampleLeftMove1[1],sampleLeftMove1[2],motorList,"TimedTranslateAndSpin");
+
+        //MOVE ARM TO DUMP MARKER
+        moveArmToDumpPosition();
+        extendArm();
 
         //Lower the latch
         lowerLatchToDrivePosition();
@@ -38,11 +42,13 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
 
         //move back a little
         moveByDistance(sampleLeftMove3[0],sampleLeftMove3[1],sampleLeftMove3[2],motorList,"TimedTranslateAndSpin");
-        //wait for claiming
-        endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
 
-        }
+        //wait for claiming
+        depositMarkerInDepot(motorList);
+
+        //FOLD ARE TO TRAVEL POSITION
+        moveArmtoTravelPosition();
+
         //turn for crater drive
         turnToFieldHeading(sampleLeftTurn2, motorList);
 
@@ -56,13 +62,9 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
         //drive to crater
         moveByDistance(sampleLeftMove5[0],sampleLeftMove5[1],sampleLeftMove5[2],motorList,"TimedTranslateAndSpin");
 
-        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
-
-        }
+        waitForArmsToMove();
 
     }
-
     private void executeDepotRightAuton(ArrayList<DcMotor> motorList){
         long endTimer = 0;
 
@@ -70,7 +72,7 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
         double [] sampleRightMove2 = new double[] {6, -35, (Math.PI*1)/6};
         double [] sampleRightMove3 = new double[] {-0.5, 0.5, 0};
         double [] sampleRightMove4 = new double[] {-.5,-0.5,0};
-        double [] sampleRightMove5 = new double[] {-2,2,0};
+        double [] sampleRightMove5 = new double[] {-42,42,0};
         double sampleRightTurn1 = -45;
         double sampleRightTurn2 = 135;
         double sampleRightTurn3 = 125;
@@ -78,6 +80,10 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
 
         //Move to Sample
         moveByDistance(sampleRightMove1[0],sampleRightMove1[1],sampleRightMove1[2],motorList,"TimedTranslateAndSpin");
+
+        //MOVE ARM TO DUMP MARKER
+        moveArmToDumpPosition();
+        extendArm();
 
         //Lower the latch
         lowerLatchToDrivePosition();
@@ -90,11 +96,12 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
 
         //move back a little
         moveByDistance(sampleRightMove3[0],sampleRightMove3[1],sampleRightMove3[2],motorList,"TimedTranslateAndSpin");
-        //wait for claiming
-        endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
 
-        }
+        //wait for claiming
+        depositMarkerInDepot(motorList);
+
+        //FOLD ARE TO TRAVEL POSITION
+        moveArmtoTravelPosition();
 
         //turn towards crater
         turnToFieldHeading(sampleRightTurn2, motorList);
@@ -109,27 +116,28 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
         //drive to crater
         moveByDistance(sampleRightMove5[0],sampleRightMove5[1],sampleRightMove5[2],motorList,"TimedTranslateAndSpin");
 
-        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
-
-        }
+        waitForArmsToMove();
 
     }
     private void executeDepotCenterAuton(ArrayList<DcMotor> motorList){
         long endTimer = 0;
 
         double [] sampleCenterMove1 = new double[] {-3, -31, -(Math.PI*3)/6};
-        double [] sampleCenterMove2 = new double[] {0, -33, 0};
-        double [] sampleCenterMove3 = new double[] {0.5, 0.5, 0};
+        double [] sampleCenterMove2 = new double[] {0, -25, 0};  //Sample
+        double [] sampleCenterMove3 = new double[] {0.75, 0.75, 0};
         double [] sampleCenterMove4 = new double[] {.5,-0.5,0};
-        double [] sampleCenterMove5 = new double[] {5,5,0};
+        double [] sampleCenterMove5 = new double[] {52,62,0};
         double sampleCenterTurn1 = -135;
         double sampleCenterTurn2 = 45;
         double sampleCenterTurn3 = 55;
-        double sampleCenterTurn4 =47;
+        double sampleCenterTurn4 =45;
 
         //Move to Sample
         moveByDistance(sampleCenterMove1[0],sampleCenterMove1[1],sampleCenterMove1[2],motorList,"TimedTranslateAndSpin");
+
+        //MOVE ARM TO DUMP MARKER
+        moveArmToDumpPosition();
+        extendArm();
 
         //Lower the latch
         lowerLatchToDrivePosition();
@@ -143,10 +151,10 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
         //move back a little
         moveByDistance(sampleCenterMove3[0],sampleCenterMove3[1],sampleCenterMove3[2],motorList,"TimedTranslateAndSpin");
         //wait for claiming
-        endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
+        depositMarkerInDepot(motorList);
 
-        }
+        //FOLD ARE TO TRAVEL POSITION
+        moveArmtoTravelPosition();
 
         //turn towards crater
         turnToFieldHeading(sampleCenterTurn2, motorList);
@@ -161,10 +169,7 @@ public class Auton_Depot_BETA4 extends eBotsOpMode {
         //drive to crater
         moveByDistance(sampleCenterMove5[0],sampleCenterMove5[1],sampleCenterMove5[2],motorList,"TimedTranslateAndSpin");
 
-        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
-
-        }
+        waitForArmsToMove();
 
     }
 
