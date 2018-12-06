@@ -1,16 +1,15 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import java.util.ArrayList;
 import java.util.List;
+
 //@Disabled
 @TeleOp
-public class Teleop_Competition extends LinearOpMode {
+public class Teleop_Competition_BETA extends LinearOpMode {
     //Drive Motors
     private DcMotor frontLeft;
     private DcMotor frontRight;
@@ -450,7 +449,7 @@ public class Teleop_Competition extends LinearOpMode {
 
             //Set armAngle to travel position
             //  RIGHT BUMPER + B
-            if (gamepad2.right_bumper & gamepad2.b & !armAngleMotor.isBusy()) {
+            if (gamepad2.right_bumper & gamepad2.b ) {  //& !armAngleMotor.isBusy()
                 armAngleMotor.setPower(0);
                 armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 armAngleMotor.setTargetPosition(armAngleEffectiveTravelPositiion);
@@ -462,26 +461,26 @@ public class Teleop_Competition extends LinearOpMode {
 
             //Set armAngle to score position
             //  RIGHT BUMPER + Y
-            if (gamepad2.right_bumper & gamepad2.y & !armAngleMotor.isBusy()) {
+            if (gamepad2.right_bumper & gamepad2.y ) {  //& !armAngleMotor.isBusy()
                 armAngleMotor.setPower(0);
                 armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 armAngleMotor.setTargetPosition(armAngleEffectiveScorePosition);
                 armAngleMotor.setPower(1);
                 //TODO:  Make timeout a function of starting position
-                autoMoveTimeLimit = 10000;  //only allow 10 seconds for move
+                autoMoveTimeLimit = 6000;  //only allow 6 seconds for move
                 autoMoveStart = System.nanoTime() / 1000000;  //Current time in milliseconds
 
             }
 
             //Set armAngle to collect position
             //  RIGHT BUMPER + A
-            if (gamepad2.right_bumper & gamepad2.a & !armAngleMotor.isBusy()) {
+            if (gamepad2.right_bumper & gamepad2.a ) {  //& !armAngleMotor.isBusy()
                 armAngleMotor.setPower(0);
                 armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 armAngleMotor.setTargetPosition(armAngleEffectiveLimit);
                 armAngleMotor.setPower(1);
                 //TODO:  Make timeout a function of starting position
-                autoMoveTimeLimit = 7000;  //only allow 7 seconds for move
+                autoMoveTimeLimit = 6000;  //only allow 7 seconds for move
                 autoMoveStart = System.nanoTime() / 1000000;  //Current time in milliseconds
 
             }

@@ -59,7 +59,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     //final static int ARM_ANGLE_COLLECT_POSITION = -10000;  //TEST POSITION
     final static int ARM_ANGLE_TRAVEL_POSITION = -5600;
     final static int ARM_ANGLE_SCORE_POSITION = -1000;    //MUST VERIFY
-    final static int ARM_ANGLE_DUMP_POSITION = -9500;      //-11000 might be too low, can hit glass
+    final static int ARM_ANGLE_DUMP_POSITION = -8000;      //-9500 was OK, but may catch side, -11000 might be too low, can hit glass
 
     //These are constants used to define counts per revolution of NEVEREST motors with encoders
     static final int NEVEREST_60_CPR = 1680;
@@ -67,11 +67,11 @@ public abstract class eBotsOpMode extends LinearOpMode {
     static final int NEVEREST_20_CPR = 560;
 
     //final int ARM_EXTENSION_COLLECTION_POSITION = 27800;
-    final static int ARM_EXTENSION_COLLECTION_POSITION = -54920; //  54946 was observed in -57500;  //test position
+    final static int ARM_EXTENSION_COLLECTION_POSITION = -54750; //  54946 was observed in -57500;  //test position
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27800;
 
-    final static int LATCH_DEPLOY_POSITION = -13800;        //13900 is a little too high, -13200 usually good
+    final static int LATCH_DEPLOY_POSITION = -12500;        //13800 is competition position, -12500 for eBots lander (shorter)
     //13500 is a little high for our practice lander
     final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
     final static int LATCH_ENGAGE_POSITION = -11000;
@@ -412,15 +412,38 @@ public abstract class eBotsOpMode extends LinearOpMode {
         //Based on the field coordinate system, positive roll is spinning to the left
         //But the drive vector equations consider turning to the right to be positive
         //So to establish a targetAngle, the desired spinAngleInDegrees must be subtracted from the currentHeading
+        //But before target angle, make sure that the spin angle is efficient, don't let it exceed 180
+
+
+        if(Math.abs(spinAngleInDegrees)>180){
+            spinAngleInDegrees = (360 - Math.abs(spinAngleInDegrees))*(-Math.signum(spinAngleInDegrees));
+        }
+
         double targetAngle = adjustedAngle - spinAngleInDegrees;
 
         //The imu changes sign at 180 degrees
         // For this control loop to work, must catch this CROSSOVER event
         if (Math.abs(targetAngle)>180){
             currentHeadingModifier = true;
-            if(targetAngle>180) targetAngle = 360-targetAngle;
+            if(targetAngle>180) targetAngle = -360+targetAngle;
             if(targetAngle<-180) targetAngle = targetAngle+360;
         }
+
+        //Now that that the target angle has been normalized, it is possible that
+        //The current heading will have a different sign from target angle
+        //Detect if that is the case and normalize the adjusted angle
+        //But be careful, this happens from angle -10 to 10 as well as -179 to 170
+        //So this only happens when turning in a direction and signs are different unexpectedly
+        // (like angles increasing but target is negative when starting positive)
+        //  Think of starting at 179 an spinning CCW (-2) to -179
+        //  You would expect angle to increase, but target is less than starting point
+        if ((spinAngleInDegrees>0 && targetAngle > currentHeading) |//Spinning to the right, so angle count is decreasing AND target angle > currentHeading(adjustedAngle)
+                (spinAngleInDegrees<0 && targetAngle < currentHeading)){
+            adjustedAngle= (360-Math.abs(currentHeading))*Math.signum(targetAngle);
+        } else{
+            adjustedAngle = currentHeading;
+        }
+
         double angleFromTarget = Math.abs(spinAngleInDegrees);
         if(angleFromTarget < angleBufferForPrecision){
             //This formula was checked on Google Sheets
@@ -438,13 +461,14 @@ public abstract class eBotsOpMode extends LinearOpMode {
                 //  Just keep spinning to the right
 
                 //Get the new adjusted angle
-                adjustedAngle = getCurrentHeading();
-//                if (currentHeadingModifier && adjustedAngle > 180) {
-//                    //This detects when crossover occurs, must add overflow
-//                    //And applies the adjustment to the current heading if necessary
-//                    overFlowAngle = 180 - adjustedAngle;
-//                    adjustedAngle = -180 - overFlowAngle;
-//                }
+                getCurrentHeading();
+                if ((spinAngleInDegrees>0 && targetAngle > currentHeading) |//Spinning to the right, so angle count is decreasing AND target angle > currentHeading(adjustedAngle)
+                        (spinAngleInDegrees<0 && targetAngle < currentHeading)){
+                    adjustedAngle= (360-Math.abs(currentHeading))*Math.signum(targetAngle);
+                } else{
+                    adjustedAngle = currentHeading;
+                }
+
 
                 //If close to the target angle
                 angleFromTarget = Math.abs(adjustedAngle - targetAngle);
@@ -467,15 +491,15 @@ public abstract class eBotsOpMode extends LinearOpMode {
                 //  Just keep spinning to the left
 
                 //Get the new adjusted angle
-                adjustedAngle = getCurrentHeading();
-
-//                if(currentHeadingModifier && adjustedAngle < -180) {
-//                    //If crossover occurs
-//                    //And applies the adjustment to the current heading if necessary
-//
-//                    overFlowAngle = 180 + adjustedAngle;  //add current heading since large negative
-//                    adjustedAngle = 180 + overFlowAngle;
-//                }
+                getCurrentHeading();
+                //Get the new adjusted angle
+                getCurrentHeading();
+                if ((spinAngleInDegrees>0 && targetAngle > currentHeading) |//Spinning to the right, so angle count is decreasing AND target angle > currentHeading(adjustedAngle)
+                        (spinAngleInDegrees<0 && targetAngle < currentHeading)){
+                    adjustedAngle= (360-Math.abs(currentHeading))*Math.signum(targetAngle);
+                } else{
+                    adjustedAngle = currentHeading;
+                }
 
                 angleFromTarget = Math.abs(adjustedAngle - targetAngle);
                 if (Math.abs(adjustedAngle - targetAngle) < angleBufferForPrecision){
@@ -646,7 +670,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         // However, this variable will need to be verified.  Based on spin timing, assume no slip initially
         //TODO:  Feather-in this slip factor
         //TODO:  It appears to be a function of the alignment of driveVector with wheelAngle
-        //TODO:  FOR Lateral movement, the spin effeciency is effectively 1, for spin it is 1/sqrt(2)
+        //TODO:  FOR Lateral movement, the spin efficiency is effectively 1, for spin it is 1/sqrt(2)
         double wheelSlipFactor = Math.cos(0);  //  This could be as high as Math.cos(Math.PI/4)
         double peakWheelSpeedInchesPerS = peakRobotSpeed / wheelSlipFactor;  //  in/s
         int peakWheelSpeedClicksPerS = (int) Math.round((peakWheelSpeedInchesPerS / (Math.PI*wheelDiameter))*encoderClicksPerRevolution);  //  clicks/s
@@ -665,7 +689,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         double peakAngularVelocity = (2*peakWheelSpeedInchesPerS)/(wheelDiagonalSpacing*Math.sqrt(2));
 
         //Calculate wheel revolution distance for travel
-        //Note that Gyro Zero defines orientation of positive X direction
+        //Note:  This is field-oriented, Gyro Zero (set at hanging) defines orientation of positive X direction
         //Therefore the atan2 function in this routine uses the lateral for the (first) y component and forward is (second) x
         //And to calculate robot angle, use driveAngle - currentHeading + wheelAngle (or pi/4)
         double driveAngle = Math.atan2(inchesLateral,inchesForward);   //  Angle between pi & -pi used for mecanum drive vector
@@ -857,6 +881,9 @@ public abstract class eBotsOpMode extends LinearOpMode {
         //Check the heading at the end of the move and correct it if necessary
         //target heading should be in radians
         //Return value is in radians
+        //The sign of the return angle, when considering gyro-oriented vectors (CCW is positive)
+        //uses the target as the basis and error value orients to the current heading
+        //so the if target is 0 and heading is -pi/2, the return is -pi/2
         getCurrentHeading();
         double headingError = Math.toRadians(currentHeading)-targetHeadingInRadians;
         //If large error, assume that crossover has occurred
@@ -877,7 +904,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     public void lowerLatchToDrivePosition(){
         latchMotor.setTargetPosition(LATCH_DRIVE_POSITION);
         //latchMotor.setTargetPosition(0);
-        latchMotor.setPower(0.5);
+        latchMotor.setPower(1);
     }
 
     public void moveArmToDumpPosition(){
@@ -886,6 +913,11 @@ public abstract class eBotsOpMode extends LinearOpMode {
         armAngleMotor.setPower(1);
 
     }
+    public void extendArmToClaim(){
+        armExtensionMotor.setTargetPosition(ARM_EXTENSION_DUMP_POSITION);
+        armExtensionMotor.setPower(1);
+    }
+
 
     public void extendArm(){
         armExtensionMotor.setTargetPosition(ARM_EXTENSION_COLLECTION_POSITION);
@@ -894,7 +926,9 @@ public abstract class eBotsOpMode extends LinearOpMode {
 
     public void waitForArmsToMove(){
         while(opModeIsActive()
-                && (armExtensionMotor.isBusy() | armAngleMotor.isBusy())){
+                && (armExtensionMotor.isBusy()
+                | armAngleMotor.isBusy()
+                | latchMotor.isBusy())){
             //Just wait
         }
     }
@@ -1108,6 +1142,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
                 //Assign location X location of each mineral
                 //IF 3 visible, assign relative position
                 //Assign absolute position to gold mineral, or exclude positions if gold not seen
+
                 if (updatedRecognitions.size() > 0 && updatedRecognitions.size() < 4) {
                     for (Recognition recognition : updatedRecognitions) {
                         //  Assign X position ot each mineral identified
