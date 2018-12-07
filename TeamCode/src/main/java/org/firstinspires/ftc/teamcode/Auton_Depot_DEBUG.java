@@ -42,14 +42,14 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
     @Override
     public void runOpMode(){
         //Prepare the gyro in the Expansion hub
-        initializeImu();
+        //initializeImu();
 
         //Create an array for drive motors
-        ArrayList<DcMotor> motorList= new ArrayList<>();
-        initializeDriveMotors(motorList);
+        //ArrayList<DcMotor> motorList= new ArrayList<>();
+        //initializeDriveMotors(motorList);
 
         //Initialize motors for manipulator
-        initializeManipMotors();
+        //initializeManipMotors();
 
         //Initialize the variables that are being used in the main loop
         double spinAngle;    //NOTE:  Positive spin is towards right
@@ -106,7 +106,7 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
         if (tfod != null) {
             tfod.activate();
         }
-
+        int itemCount=0;
         int samplingScanCount = 0;
         int goldLeftCount = 0;
         int goldCenterCount = 0;
@@ -123,6 +123,7 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
             if (tfod != null) {
                 TensorFlowRefactor tensorFlowRefactor = new TensorFlowRefactor().invoke();
                 samplingScanCount++;    //Increment the number of samping scans
+
                 //Now number of loops where sampling response is received
                 if(tensorFlowRefactor.getGoldPosition() != GoldPosition.UNKNOWN
                         | tensorFlowRefactor.getGoldNotLocated() != GoldPosition.UNKNOWN){
@@ -145,12 +146,12 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
                 samplingInputPercentage = (double) (samplingResponseReceived) / samplingScanCount;
 
             }
-            telemetry.addData("Scan Count", samplingScanCount);
-            telemetry.addData("Input Rate", samplingInputPercentage);
-            telemetry.addData("Left Rating", goldLeftConfidence);
-            telemetry.addData("Center Rating", goldCenterConfidence);
-            telemetry.addData("Right Rating", goldRightConfidence);
-            telemetry.update();
+
+            //telemetry.addData("Scan Count", samplingScanCount);
+            //telemetry.addData("Input Rate", samplingInputPercentage);
+            //telemetry.addData("Left Rating", goldLeftConfidence);
+            //telemetry.addData("Center Rating", goldCenterConfidence);
+            //telemetry.addData("Right Rating", goldRightConfidence);
         }
         //Based on the confidence numbers calculated above, determine the final goldPosition
         if (goldLeftConfidence>goldCenterConfidence

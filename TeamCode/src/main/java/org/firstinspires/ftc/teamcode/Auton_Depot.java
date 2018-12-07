@@ -148,18 +148,18 @@ public class Auton_Depot extends eBotsOpMode {
         /*push away*/                           double [] sampleRightMove0 = new double[] {0, -3, 0};  //push away
         //Extend arm & move armAngle travel position
         /*turn to face depot*/                  double sampleRightTurn0 = -90;
-        /*move in front of sample*/             double [] sampleRightMove1 = new double[] {-23, -25, 0};
+        /*move in front of sample*/             double [] sampleRightMove1 = new double[] {-35, -20, 0};
         //Lower latch and move arm to dump position
         /*push gold into depot*/                double [] sampleRightMove2 = new double[] {6, -35, (Math.PI*1)/6};
         /*turn to align with wall*/             double sampleRightTurn1 = -45;
-        /*move back and towards wall little*/   double [] sampleRightMove3 = new double[] {-2, 2, 0};
+        /*move back and towards wall little*/   double [] sampleRightMove3 = new double[] {-10, 10, 0};
         //Deposit marker and claim depot
         //lower latch and move to armAngle to travel position
         /*turn for crater drive*/               double sampleRightTurn2 = 135;
         /*Align with wall*/                     double [] sampleRightMove4 = new double[] {-.5,-0.5,0};
         /*straighten for drive (Overturn)*/     double sampleRightTurn3 = 125;
         /*straighten for drive slight angle*/   double sampleRightTurn4 = 133;
-        /*drive to crater*/                     double [] sampleRightMove5 = new double[] {-42,42,0};
+        /*drive to crater*/                     double [] sampleRightMove5 = new double[] {-35,35,0};
 
 
 
@@ -176,8 +176,6 @@ public class Auton_Depot extends eBotsOpMode {
         //Move to Sample
         moveByDistance(sampleRightMove1[0],sampleRightMove1[1],sampleRightMove1[2],motorList,"TimedTranslateAndSpin");
 
-        //MOVE ARM TO DUMP MARKER
-        moveArmToDumpPosition();
 
         //Lower the latch
         lowerLatchToDrivePosition();
@@ -190,6 +188,9 @@ public class Auton_Depot extends eBotsOpMode {
 
         //move back a little
         moveByDistance(sampleRightMove3[0],sampleRightMove3[1],sampleRightMove3[2],motorList,"TimedTranslateAndSpin");
+
+        //MOVE ARM TO DUMP MARKER
+        moveArmToDumpPosition();
 
         //wait for claiming
         depositMarkerInDepot(motorList);

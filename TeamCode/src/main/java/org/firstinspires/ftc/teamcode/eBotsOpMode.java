@@ -19,6 +19,7 @@ import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
@@ -59,7 +60,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     //final static int ARM_ANGLE_COLLECT_POSITION = -10000;  //TEST POSITION
     final static int ARM_ANGLE_TRAVEL_POSITION = -5600;
     final static int ARM_ANGLE_SCORE_POSITION = -1000;    //MUST VERIFY
-    final static int ARM_ANGLE_DUMP_POSITION = -8000;      //-9500 was OK, but may catch side, -11000 might be too low, can hit glass
+    final static int ARM_ANGLE_DUMP_POSITION = -9500;      //was -8000, -9500 was OK, but may catch side, -11000 might be too low, can hit glass
 
     //These are constants used to define counts per revolution of NEVEREST motors with encoders
     static final int NEVEREST_60_CPR = 1680;
@@ -69,9 +70,9 @@ public abstract class eBotsOpMode extends LinearOpMode {
     //final int ARM_EXTENSION_COLLECTION_POSITION = 27800;
     final static int ARM_EXTENSION_COLLECTION_POSITION = -54750; //  54946 was observed in -57500;  //test position
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
-    final static int ARM_EXTENSION_DUMP_POSITION = -27800;
+    final static int ARM_EXTENSION_DUMP_POSITION = -27600;
 
-    final static int LATCH_DEPLOY_POSITION = -12500;        //13800 is competition position, -12500 for eBots lander (shorter)
+    final static int LATCH_DEPLOY_POSITION = -13800;        //-13800 is competition position, -12500 for eBots lander (shorter)
     //13500 is a little high for our practice lander
     final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
     final static int LATCH_ENGAGE_POSITION = -11000;
@@ -405,7 +406,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         double adjustedAngle = getCurrentHeading();  //Adjusted angle is to handle crossover of sign at 180 degrees
         double angleBufferForPrecision = 35;
         double fullSpeed = 0.5;
-        double throttleDownSpeed = 0.15;
+        double throttleDownSpeed = 0.2;
         double slopeForThrottleDown = (fullSpeed-throttleDownSpeed)/angleBufferForPrecision;
 
         //Create loop so robot spins until target angle is achieved
@@ -583,8 +584,8 @@ public abstract class eBotsOpMode extends LinearOpMode {
         double maxSlowDownFactor = 0.5;
         long transientFence = 500;  //accelerate and decelerate within this time window
         getRadHeading();
-        double maxScale = 0.65;
-        if(driveTime<1) maxScale=0.4;  //If a delicate maneuveur, go slow
+        double maxScale = 0.9;   //was 0.65
+        if(driveTime<1) maxScale=0.65;  //If a delicate maneuveur, go slow
         double driveScaleFactor=1;
         long currentTime=(System.nanoTime()/1000000);
         long startTime = currentTime;
@@ -904,6 +905,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     public void lowerLatchToDrivePosition(){
         latchMotor.setTargetPosition(LATCH_DRIVE_POSITION);
         //latchMotor.setTargetPosition(0);
+        latchMotor.setTargetPosition(LATCH_DEPLOY_POSITION);
         latchMotor.setPower(1);
     }
 
@@ -1074,6 +1076,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         private int silverMineral1X;
         private int silverMineral2X;
         private double absoluteConfidence;
+        private int itemCount;
 
         public TensorFlowRefactor() {
             this.goldRelativePositionDetermined = false;
@@ -1107,6 +1110,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         public int getSilverMineral1X(){return silverMineral1X;}
         public int getSilverMineral2X(){return silverMineral2X;}
         public double getAbsoluteConfidence() {return absoluteConfidence;}
+        public int getItemCount(){return itemCount;}
 
         private GoldPosition getAbsolutePosition(int position){
 
@@ -1125,6 +1129,11 @@ public abstract class eBotsOpMode extends LinearOpMode {
             return calculatedPosition;
         }
 
+        //And setters
+        public void setItemCount (int numItems){
+            itemCount=numItems;
+        }
+
         public TensorFlowRefactor invoke() {
             // getUpdatedRecognitions() will return null if no new information is available since
             // the last time that call was made.
@@ -1138,11 +1147,25 @@ public abstract class eBotsOpMode extends LinearOpMode {
             List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
             if (updatedRecognitions != null) {
 
+                telemetry.addData("Item Count before purge", updatedRecognitions.size());
+                if(updatedRecognitions.size()>3) {
+                    Recognition currentRecognition;
+                    int bottomThirdYLimit = 480;
+                    for (Iterator<Recognition> iterator = updatedRecognitions.iterator(); iterator.hasNext(); ) {
+                        currentRecognition = iterator.next();
+                        if (currentRecognition.getBottom() < 480) {
+                            iterator.remove();
+                        }
+                    }
+                }
+                telemetry.addData("Item Count after purge", updatedRecognitions.size());
+
+                telemetry.update();
                 //If at least 1 sampling item is visible, but not 4
                 //Assign location X location of each mineral
                 //IF 3 visible, assign relative position
                 //Assign absolute position to gold mineral, or exclude positions if gold not seen
-
+                setItemCount(updatedRecognitions.size());
                 if (updatedRecognitions.size() > 0 && updatedRecognitions.size() < 4) {
                     for (Recognition recognition : updatedRecognitions) {
                         //  Assign X position ot each mineral identified

@@ -12,43 +12,68 @@ import java.util.ArrayList;
 public class Auton_Crater extends eBotsOpMode {
 
     private void executeCraterLeftAuton(ArrayList<DcMotor> motorList){
-        long endTimer = 0;
 
-        double [] sampleLeftMove1 = new double[] {20, -30, -(Math.PI*3)/6};
-        double [] sampleLeftMove2 = new double[] {0, -2, 0};  //simple sample move
-        double [] sampleLeftMove3 = new double[] {30,10,0};  //pull it back and spin
-        double [] sampleLeftMove4 = new double[] {6,-6,0};  //snug to wall
-        double [] sampleLeftMove5 = new double[] {15,15,0};     //drive to depot
-        //double [] sampleLeftMove1 = new double[] {34, -72, (Math.PI)/4};  //Spin move to sample with back wheel
-        //double [] sampleLeftMove2 = new double[] {40,40,0};  This goes to depot
-        double [] sampleLeftMove6 = new double[] {-30,-30,0};
-        double sampleLeftTurn1 = 45;
-        double sampleLeftTurn2 = 45;
-        double sampleLeftTurn3 = -135;
-        double sampleLeftTurn4 = 47;
-        double sampleLeftTurn5 = 41;
+        //Overview
+        /*push away*/                           double [] sampleLeftMove0 = new double[] {0, -3, 0};
+        //Extend arm & move to travel position
+        /*turn to face crater*/                 double sampleLeftTurn0 = -90;
+        /*move in front of sample*/             double [] sampleLeftMove1 = new double[] {20, -20, 0};
+        //Lower latch
+        /*Simple sample move*/                  double [] sampleLeftMove2 = new double[] {0, -2, 0};  //simple sample move
+        /*move back a little*/                  double [] sampleLeftMove3 = new double[] {0,4,0};  //pull it back
+        /*turn to align with wall*/             double sampleLeftTurn1 = 45;
+        /*move toward crater and towards wall*/ double [] sampleLeftMove3_2 = new double[] {12,12,0};  //pull it back
+
+        /*Align with wall*/                     double [] sampleLeftMove4 = new double[] {17,-17,0};
+        /*turn for crater drive (overturn)*/    double sampleLeftTurn2 = 55;
+        /*turn for crater drive (slight angle)*/double sampleLeftTurn3 = 45;
+        //Move arm to dump position
+        /*Drive to Depot*/                      double [] sampleLeftMove5 = new double[] {5,5,0};
+        //Deposit marker and claim depot
+        //Extend arm & move to armAngle to travel position
+
+        /*drive to crater*/                     double [] sampleLeftMove6 = new double[] {-27,-27,0};
+        //Note:  facing the wrong way
+        //---------------------------------------
+
+        //Push off
+        moveByDistance(sampleLeftMove0[0],sampleLeftMove0[1],sampleLeftMove0[2],motorList,"TimedTranslateAndSpin");
+
+        //Unfold and extend arm
+        moveArmtoTravelPosition();
+        extendArm();
+
+        //Turn to the crater
+        turnToFieldHeading(sampleLeftTurn0, motorList);
+
 
         //Move to Sample
         moveByDistance(sampleLeftMove1[0],sampleLeftMove1[1],sampleLeftMove1[2],motorList,"TimedTranslateAndSpin");
+
         //Lower the latch
         lowerLatchToDrivePosition();
-        //Sample
+
+        // Simple Sample move
         moveByDistance(sampleLeftMove2[0],sampleLeftMove2[1],sampleLeftMove2[2],motorList,"TimedTranslateAndSpin");
-        //Pull back and spin
+
+        //Pull back a little
         moveByDistance(sampleLeftMove3[0],sampleLeftMove3[1],sampleLeftMove3[2],motorList,"TimedTranslateAndSpin");
 
         //Turn to Crater
         turnToFieldHeading(sampleLeftTurn1,motorList);
 
+        /*move toward crater and towards wall*/
+        moveByDistance(sampleLeftMove3_2[0],sampleLeftMove3_2[1],sampleLeftMove3_2[2],motorList,"TimedTranslateAndSpin");
 
         //Snug to wall
         moveByDistance(sampleLeftMove4[0],sampleLeftMove4[1],sampleLeftMove4[2],motorList,"TimedTranslateAndSpin");
 
         //straighten for drive
-        turnToFieldHeading(55,motorList);
-        turnToFieldHeading(47,motorList);
+        turnToFieldHeading(sampleLeftTurn2,motorList);
+        turnToFieldHeading(sampleLeftTurn3,motorList);
 
         moveArmToDumpPosition();
+
         //Drive to Depot
         moveByDistance(sampleLeftMove5[0],sampleLeftMove5[1],sampleLeftMove5[2],motorList,"TimedTranslateAndSpin");
 
@@ -56,113 +81,157 @@ public class Auton_Crater extends eBotsOpMode {
         depositMarkerInDepot(motorList);
         moveArmtoTravelPosition();
 
+        //Drive back to crater
         moveByDistance(sampleLeftMove6[0],sampleLeftMove6[1],sampleLeftMove6[2],motorList,"TimedTranslateAndSpin");
 
         waitForArmsToMove();
 
     }
     private void executeCraterCenterAuton(ArrayList<DcMotor> motorList){
-        long endTimer = 0;
 
-//        double [] sampleCenterMove1 = new double[] {-1.5, -38, (Math.PI)/4};
-//        double [] sampleCenterMove2 = new double[] {55, 5, -(Math.PI)/4};
-//        double [] sampleCenterMove3 = new double[] {25, 25, 0};
-//        double [] sampleCenterMove4 = new double[] {-55,-55,0};
-//        double [] sampleCenterMove5 = new double[] {5,5,0};
-        double sampleCenterTurn1 = 0;
-        double sampleCenterTurn2 = 45;
-        double sampleCenterTurn3 = -135;
-        double sampleCenterTurn4 =47;
+        //Overview
+        /*push away*/                           double [] sampleCenterMove0 = new double[] {0, -3, 0};
+        //Extend arm & move to travel position
+        /*turn to face crater*/                 double sampleCenterTurn0 = -90;
+        /*sample*/                              double [] sampleCenterMove1 = new double[] {0, -22, 0};
+        //Lower latch
+        /*move back a little*/                  double [] sampleCenterMove2 = new double[] {0,7,0};  //pull it back
+        /*move left to prepare for depot drive*/double [] sampleCenterMove3 = new double[] {30,0,0};
+        /*turn to align with wall*/             double sampleCenterTurn1 = 45;
+        /*Snug up to wall*/                     double [] sampleCenterMove4 = new double[] {8,-8,0};
+        /*turn for crater drive (overturn)*/    double sampleCenterTurn2 = 55;
+        /*turn for crater drive (slight angle)*/double sampleCenterTurn3 = 47;
+        //Move arm to dump position
+        /*Drive to Depot*/                      double [] sampleCenterMove5 = new double[] {15,15,0};  //Drive to Depot
+        //Deposit marker and claim depot
+        //Extend arm & move to armAngle to travel position
 
-        double [] sampleCenterMove1 = new double[] {-3, -31, -(Math.PI*3)/6};
-        double [] sampleCenterMove2 = new double[] {0, -2, 0};  //simple sample move
-        double [] sampleCenterMove3 = new double[] {0,4,0};  //pull it back
-        double [] sampleCenterMove4 = new double[] {41,0,0};
-        double [] sampleCenterMove5 = new double[] {20,20,0};  //Drive to Depot
-        double [] sampleCenterMove6 = new double[] {-45,-45,0};
+        /*drive to crater*/                     double [] sampleCenterMove6 = new double[] {-33,-33,0};
+        //Note:  facing the wrong way
+        //---------------------------------------
 
-        //Move to Sample
+        //Push off
+        moveByDistance(sampleCenterMove0[0],sampleCenterMove0[1],sampleCenterMove0[2],motorList,"TimedTranslateAndSpin");
+
+        //Unfold and extend arm
+        moveArmtoTravelPosition();
+        extendArm();
+
+        //Turn to the crater
+        turnToFieldHeading(sampleCenterTurn0, motorList);
+
+
+        //Sample
         moveByDistance(sampleCenterMove1[0],sampleCenterMove1[1],sampleCenterMove1[2],motorList,"TimedTranslateAndSpin");
+
+
         //Lower the latch
         lowerLatchToDrivePosition();
-        //Sample
+
+        //Pull back
         moveByDistance(sampleCenterMove2[0],sampleCenterMove2[1],sampleCenterMove2[2],motorList,"TimedTranslateAndSpin");
-        //Pull back and spin
+
+        //Move left to prepare for depot drive
         moveByDistance(sampleCenterMove3[0],sampleCenterMove3[1],sampleCenterMove3[2],motorList,"TimedTranslateAndSpin");
 
-        //Spin to depot departure point
+        //Turn to align with wall
         turnToFieldHeading(sampleCenterTurn1,motorList);
-        //Get ready to move to depot
+
+        //Snug up to wall
         moveByDistance(sampleCenterMove4[0],sampleCenterMove4[1],sampleCenterMove4[2],motorList,"TimedTranslateAndSpin");
-        //Spin to depot departure point
-        turnToFieldHeading(sampleCenterTurn2,motorList);
+
+        //Align spin with wall
+        turnToFieldHeading(sampleCenterTurn2, motorList);
+        turnToFieldHeading(sampleCenterTurn3, motorList);
+
+        //prepare to claim
+        moveArmToDumpPosition();
 
         //Drive to Depot
         moveByDistance(sampleCenterMove5[0],sampleCenterMove5[1],sampleCenterMove5[2],motorList,"TimedTranslateAndSpin");
 
-        //wait for claiming
-        endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
+        //Turn to align with wall
+        turnToFieldHeading(sampleCenterTurn1,motorList);
 
-        }
+        //Claim
+        depositMarkerInDepot(motorList);
+        moveArmtoTravelPosition();
 
-
-        //Drive to Depot
+        //Drive to crater
         moveByDistance(sampleCenterMove6[0],sampleCenterMove6[1],sampleCenterMove6[2],motorList,"TimedTranslateAndSpin");
 
 
 
     }
     private void executeCraterRightAuton(ArrayList<DcMotor> motorList){
-        long endTimer = 0;
+        //Overview
+        /*push away*/                           double [] sampleRightMove0 = new double[] {0, -3, 0};
+        //Extend arm & move to travel position
+        /*turn to face crater*/                 double sampleRightTurn0 = -90;
+        /*sample*/                              double [] sampleRightMove1 = new double[] {-35, -20, 0};
+        //Lower latch
+        /*move back a little*/                  double [] sampleRightMove2 = new double[] {17,17,0};  //pull it back
+        /*move left to prepare for depot drive*/double [] sampleRightMove3 = new double[] {45,0,0};
+        /*turn to align with wall*/             double sampleRightTurn1 = 45;
+        /*Snug up to wall, take inside route*/  double [] sampleRightMove4 = new double[] {8,-8,0};
+        /*turn for depot drive (overturn)*/     double sampleRightTurn2 = 55;
+        /*turn for depot drive (slight angle)*/ double sampleRightTurn3 = 45;
+        //Move arm to dump position
+        /*Drive to Depot*/                      double [] sampleRightMove5 = new double[] {15,15,0};  //Drive to Depot  (slight angle to depot)
+        //Deposit marker and claim depot
+        //Extend arm & move to armAngle to travel position
+        /*back into crater*/          double [] sampleRightMove6 = new double[] {-30,-30,0};
+        //Note:  facing the wrong way
+        //---------------------------------------
 
-        double [] sampleRightMove1 = new double[] {-23, -31, -(Math.PI*3)/6};
-        double [] sampleRightMove2 = new double[] {6, -35, (Math.PI*1)/6};
-        double [] sampleRightMove3 = new double[] {-0.5, 0.5, 0};
-        double [] sampleRightMove4 = new double[] {-.5,-0.5,0};
-        double [] sampleRightMove5 = new double[] {-2,2,0};
-        double sampleRightTurn1 = -45;
-        double sampleRightTurn2 = 135;
-        double sampleRightTurn3 = 125;
-        double sampleRightTurn4 = 133;
+        //Push off
+        moveByDistance(sampleRightMove0[0],sampleRightMove0[1],sampleRightMove0[2],motorList,"TimedTranslateAndSpin");
 
-        //Move to Sample
+        //Unfold and extend arm
+        moveArmtoTravelPosition();
+        extendArm();
+
+        //Turn to the crater
+        turnToFieldHeading(sampleRightTurn0, motorList);
+
+
+        //Sample
         moveByDistance(sampleRightMove1[0],sampleRightMove1[1],sampleRightMove1[2],motorList,"TimedTranslateAndSpin");
+
 
         //Lower the latch
         lowerLatchToDrivePosition();
 
-        //Push to Depot
+        //Pull back
         moveByDistance(sampleRightMove2[0],sampleRightMove2[1],sampleRightMove2[2],motorList,"TimedTranslateAndSpin");
 
-        //Align for turn back
-        turnToFieldHeading(sampleRightTurn1, motorList);
-
-        //move back a little
+        //Move left to prepare for depot drive
         moveByDistance(sampleRightMove3[0],sampleRightMove3[1],sampleRightMove3[2],motorList,"TimedTranslateAndSpin");
-        //wait for claiming
-        endTimer = System.nanoTime()/1000000 + 2000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
 
-        }
+        //Turn to align with wall
+        turnToFieldHeading(sampleRightTurn1,motorList);
 
-        //turn towards crater
-        turnToFieldHeading(sampleRightTurn2, motorList);
-
-        //align with wall
+        //Don't Snug up to wall, take inside route
         moveByDistance(sampleRightMove4[0],sampleRightMove4[1],sampleRightMove4[2],motorList,"TimedTranslateAndSpin");
 
-        //straighten for drive
-        turnToFieldHeading(sampleRightTurn3, motorList);  //overspin away from the wall
-        turnToFieldHeading(sampleRightTurn4, motorList);  //now align for the drive
+        //Don't Align spin with wall
+        turnToFieldHeading(sampleRightTurn2, motorList);
+        turnToFieldHeading(sampleRightTurn3, motorList);
 
-        //drive to crater
+        //prepare to claim
+        moveArmToDumpPosition();
+
+        //Drive to Depot
         moveByDistance(sampleRightMove5[0],sampleRightMove5[1],sampleRightMove5[2],motorList,"TimedTranslateAndSpin");
+        //Realign
+        turnToFieldHeading(sampleRightTurn3, motorList);
 
-        endTimer = System.nanoTime()/1000000 + 4000;//Set timer for 5 seconds
-        while((System.nanoTime()/1000000)<endTimer && opModeIsActive()){
+        //Claim
+        depositMarkerInDepot(motorList);
+        moveArmtoTravelPosition();
 
-        }
+        //Back into crater
+        moveByDistance(sampleRightMove6[0],sampleRightMove6[1],sampleRightMove6[2],motorList,"TimedTranslateAndSpin");
 
     }
 
@@ -197,8 +266,6 @@ public class Auton_Crater extends eBotsOpMode {
 
 
         waitForStart();
-        moveArmtoTravelPosition();
-        extendArm();
 
         //TODO:  FIX THE FIELD OF VIEW
         goldPosition=landAndLocateGoldMineral();
