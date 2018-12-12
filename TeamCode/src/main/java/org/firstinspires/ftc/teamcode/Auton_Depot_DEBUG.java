@@ -3,7 +3,9 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
@@ -42,14 +44,14 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
     @Override
     public void runOpMode(){
         //Prepare the gyro in the Expansion hub
-        //initializeImu();
+        initializeImu();
 
         //Create an array for drive motors
-        //ArrayList<DcMotor> motorList= new ArrayList<>();
-        //initializeDriveMotors(motorList);
+        ArrayList<DcMotor> motorList= new ArrayList<>();
+        initializeDriveMotors(motorList);
 
         //Initialize motors for manipulator
-        //initializeManipMotors();
+        initializeManipMotors();
 
         //Initialize the variables that are being used in the main loop
         double spinAngle;    //NOTE:  Positive spin is towards right
@@ -78,7 +80,7 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
             telemetry.addData("Sorry!", "This device is not compatible with TFOD");
         }
 
-
+        //VoltageSensor voltageSensor = hardwareMap.voltageSensor.get(VoltageSensor.class, "vs");
         waitForStart();
         // Start the logging of measured acceleration
         //imu.startAccelerationIntegration(new Position(), new Velocity(), 1000);
@@ -117,6 +119,8 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
         double goldCenterConfidence = 0;
         double goldRightConfidence = 0;
         double thresholdConfidence = 0.5;
+
+        /*
         while(opModeIsActive()){
             //run this loop while the opmode until user pushes stop
             //if (tfod != null && !goldPositionDetermined) {
@@ -153,6 +157,9 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
             //telemetry.addData("Center Rating", goldCenterConfidence);
             //telemetry.addData("Right Rating", goldRightConfidence);
         }
+        */
+
+        /*
         //Based on the confidence numbers calculated above, determine the final goldPosition
         if (goldLeftConfidence>goldCenterConfidence
                 && goldLeftConfidence > goldRightConfidence
@@ -184,7 +191,13 @@ public class Auton_Depot_DEBUG extends eBotsOpMode {
         }
         //Report out the final position
         telemetry.addData("Gold Position", goldPosition.toString());
-        telemetry.update();
+        */
+        while(opModeIsActive()) {
+            getCurrentHeading();
+            telemetry.addData("Heading", currentHeading);
+            telemetry.addData("Roll", currentRollDegrees);
+            telemetry.update();
+        }
     }
 
 }

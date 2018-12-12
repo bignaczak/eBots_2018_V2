@@ -1,13 +1,12 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import java.util.ArrayList;
 import java.util.List;
+
 //@Disabled
 @TeleOp
 public class Teleop_Competition extends LinearOpMode {
@@ -29,8 +28,8 @@ public class Teleop_Competition extends LinearOpMode {
     final static int ARM_ANGLE_COLLECT_POSITION = -11750;  //REAL POSITION
     //final static int ARM_ANGLE_COLLECT_POSITION = -10000;  //TEST POSITION
     final static int ARM_ANGLE_TRAVEL_POSITION = -5600;
-    final static int ARM_ANGLE_SCORE_POSITION = -1000;    //MUST VERIFY
-    final static int ARM_ANGLE_DUMP_POSITION = -9500;
+    final static int ARM_ANGLE_SCORE_POSITION = -1800;    //MUST VERIFY
+    //final static int ARM_ANGLE_DUMP_POSITION = -7300;       //Was -9500
 
     //These are constants used to define counts per revolution of NEVEREST motors with encoders
     static final int NEVEREST_60_CPR = 1680;
@@ -82,10 +81,14 @@ public class Teleop_Competition extends LinearOpMode {
     static int armExtensionEffectiveZeroPoint;
     static int armExtensionEffectiveLimit;  //This will be a small diff
 
-    static int latchEffectiveZeroPoint = -LATCH_DRIVE_POSITION;
-    static int latchEffectiveLimit = LATCH_LIMIT - LATCH_DRIVE_POSITION;
-    static int latchEffectiveEngagePosition = LATCH_ENGAGE_POSITION - LATCH_DRIVE_POSITION;
-    static int latchEffectiveRiseupPosition = LATCH_RISEUP_POSITION - LATCH_DRIVE_POSITION;
+    //static int latchEffectiveZeroPoint = -LATCH_DRIVE_POSITION;
+    //static int latchEffectiveLimit = LATCH_LIMIT - LATCH_DRIVE_POSITION;
+    //static int latchEffectiveEngagePosition = LATCH_ENGAGE_POSITION - LATCH_DRIVE_POSITION;
+    //static int latchEffectiveRiseupPosition = LATCH_RISEUP_POSITION - LATCH_DRIVE_POSITION;
+    static int latchEffectiveZeroPoint = -LATCH_DEPLOY_POSITION;
+    static int latchEffectiveLimit = LATCH_LIMIT - LATCH_DEPLOY_POSITION;
+    static int latchEffectiveEngagePosition = LATCH_ENGAGE_POSITION - LATCH_DEPLOY_POSITION;
+    static int latchEffectiveRiseupPosition = LATCH_RISEUP_POSITION - LATCH_DEPLOY_POSITION;
 
 
     private void calculateDriveVector(double driveMagnitude, double robotAngle, double spin, double[] outputArray){
@@ -450,7 +453,7 @@ public class Teleop_Competition extends LinearOpMode {
 
             //Set armAngle to travel position
             //  RIGHT BUMPER + B
-            if (gamepad2.right_bumper & gamepad2.b & !armAngleMotor.isBusy()) {
+            if (gamepad2.right_bumper & gamepad2.b ) {  //& !armAngleMotor.isBusy()
                 armAngleMotor.setPower(0);
                 armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 armAngleMotor.setTargetPosition(armAngleEffectiveTravelPositiion);
@@ -462,26 +465,26 @@ public class Teleop_Competition extends LinearOpMode {
 
             //Set armAngle to score position
             //  RIGHT BUMPER + Y
-            if (gamepad2.right_bumper & gamepad2.y & !armAngleMotor.isBusy()) {
+            if (gamepad2.right_bumper & gamepad2.y ) {  //& !armAngleMotor.isBusy()
                 armAngleMotor.setPower(0);
                 armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 armAngleMotor.setTargetPosition(armAngleEffectiveScorePosition);
                 armAngleMotor.setPower(1);
                 //TODO:  Make timeout a function of starting position
-                autoMoveTimeLimit = 10000;  //only allow 10 seconds for move
+                autoMoveTimeLimit = 6000;  //only allow 6 seconds for move
                 autoMoveStart = System.nanoTime() / 1000000;  //Current time in milliseconds
 
             }
 
             //Set armAngle to collect position
             //  RIGHT BUMPER + A
-            if (gamepad2.right_bumper & gamepad2.a & !armAngleMotor.isBusy()) {
+            if (gamepad2.right_bumper & gamepad2.a ) {  //& !armAngleMotor.isBusy()
                 armAngleMotor.setPower(0);
                 armAngleMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 armAngleMotor.setTargetPosition(armAngleEffectiveLimit);
                 armAngleMotor.setPower(1);
                 //TODO:  Make timeout a function of starting position
-                autoMoveTimeLimit = 7000;  //only allow 7 seconds for move
+                autoMoveTimeLimit = 6000;  //only allow 7 seconds for move
                 autoMoveStart = System.nanoTime() / 1000000;  //Current time in milliseconds
 
             }

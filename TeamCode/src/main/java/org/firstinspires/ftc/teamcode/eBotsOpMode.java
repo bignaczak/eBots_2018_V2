@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode;
 
+import android.os.Environment;
+import android.util.Log;
+
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -17,6 +20,15 @@ import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer.Came
 import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -40,6 +52,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     public BNO055IMU imu;          //Create a variable for the gyroscope on the Expansion Hub
     public double currentHeading;  //Angular direction in Degrees
     public double radHeading;       //Angular orientation in radians
+    public double currentRollDegrees;   //Roll
     public Orientation angles;             //For imu gyroscope
     public Orientation radAngles;           //for radian heading
     public Acceleration gravity;           // State used for updating telemetry
@@ -72,7 +85,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27600;
 
-    final static int LATCH_DEPLOY_POSITION = -13800;        //-13800 is competition position, -12500 for eBots lander (shorter)
+    final static int LATCH_DEPLOY_POSITION = -12500;        //-13800 is competition position, -12500 for eBots lander (shorter)
     //13500 is a little high for our practice lander
     final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
     final static int LATCH_ENGAGE_POSITION = -11000;
@@ -277,6 +290,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     public double getCurrentHeading(){
         angles   = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         currentHeading = angles.firstAngle;
+        currentRollDegrees = angles.secondAngle;
         return currentHeading;
     }
 
@@ -579,7 +593,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         }
     }
 
-    private void performDriveStepTimedTranslateAndSpin(ArrayList<DcMotor> motors, double driveAngle, double driveTime, double spinPower, double drivePower, double[] driveValues, double headingTarget) {
+    private void performDriveStepTimedTranslateAndSpin(ArrayList<DcMotor> motors, double driveAngle, double driveTime, double spinPower, double drivePower, double[] driveValues, double headingTarget, boolean stopOnRollLimit) {
         int[] currentMotorPositions = new int[4];
         double maxSlowDownFactor = 0.5;
         long transientFence = 500;  //accelerate and decelerate within this time window
@@ -591,7 +605,69 @@ public abstract class eBotsOpMode extends LinearOpMode {
         long startTime = currentTime;
         long endTime = startTime +  (long) (driveTime*1000 * (1/maxScale));  //Add buffer for transientFence
         long elapsedTime=0;
-        long remainingTime=endTime;
+        long remainingTime;
+        long transientComparison = 0;
+        double transientScale = 1;
+        int targetPositionAccuracy = 50;
+        boolean driveStepPositionReached = false;
+        boolean rollLimitReached = false;
+
+        while(opModeIsActive() && (currentTime < endTime) && !rollLimitReached){
+            calculateFieldOrientedDriveVector(driveAngle,radHeading,drivePower,spinPower,driveValues);
+            driveScaleFactor = maxScale/findMaxAbsValue(driveValues);  //Normalize drive vector, make sure nothing > 1
+            scaleDrive(driveScaleFactor,driveValues);
+            /*//Apply transient scale if within fence
+            if(transientComparison<transientFence) {
+                transientScale = (transientFence - transientComparison)/transientFence;  //Percentage of slowdown to use
+                transientScale = transientScale*(1-maxSlowDownFactor);  //when transientComparison at 0, scale to down to 0.3
+                scaleDrive(transientScale,driveValues);
+
+            }*/
+            for(int i = 0; i<motors.size(); i++){
+                motors.get(i).setPower(driveValues[i]);
+            }
+            currentTime=(System.nanoTime()/1000000);
+            elapsedTime=currentTime-startTime;
+            remainingTime= endTime-currentTime;
+            transientComparison = (elapsedTime < remainingTime) ? elapsedTime : remainingTime;
+
+            getRadHeading();
+            getMotorPositions(currentMotorPositions, motors);
+            getCurrentHeading();
+            if(stopOnRollLimit && Math.abs(currentRollDegrees)>7.5){
+                rollLimitReached = true;
+            }
+            telemetry.addData("drivePower", drivePower);
+            telemetry.addData("driveTime", driveTime);
+            telemetry.addData("Heading", Math.toDegrees(radHeading));
+            telemetry.addData("radHeading", radHeading);
+            telemetry.addData("driveValues", Arrays.toString(driveValues));
+            telemetry.addData("Actual Value0", Arrays.toString(currentMotorPositions));
+            telemetry.update();
+        }
+        double headingError = checkHeadingVersusTarget(headingTarget);
+        if(Math.abs(headingError)>Math.toRadians(5)) {
+            twistToAngle(Math.toDegrees(headingError), 0.2, motors);
+        }
+        stopMotors(motors);
+    }
+
+    private void performDriveStepUsingEncoders(ArrayList<DcMotor> motors, double driveAngle, double driveTime, double spinPower, double drivePower, double[] driveValues, double headingTarget) {
+        int[] currentMotorPositions = new int[4];
+        double maxSlowDownFactor = 0.5;
+        long transientFence = 500;  //accelerate and decelerate within this time window
+        getRadHeading();
+        double maxScale = 0.9;   //was 0.65
+        if(driveTime<1) maxScale=0.65;  //If a delicate maneuveur, go slow
+        double driveScaleFactor=1;
+        long currentTime=(System.nanoTime()/1000000);
+        long startTime = currentTime;
+        long endTime = startTime +  (long) (driveTime*1000 * (1/maxScale));  //Add buffer for transientFence
+        long elapsedTime=0;
+        long remainingTime;
+
+        int transientBuffer = NEVEREST_40_CPR * 1;  //Scale the drive values within this range
+
         long transientComparison = 0;
         double transientScale = 1;
         while(opModeIsActive() && (currentTime < endTime)){
@@ -628,23 +704,14 @@ public abstract class eBotsOpMode extends LinearOpMode {
             twistToAngle(Math.toDegrees(headingError), 0.2, motors);
         }
         stopMotors(motors);
-//        endTime = System.nanoTime()/1000000 + (long) (4*1000);
-
-//        while(opModeIsActive() && System.nanoTime()/1000000 < endTime) {
-//            telemetry.addData("drivePower", drivePower);
-//            telemetry.addData("driveTime", driveTime);
-//            telemetry.addData("Heading", Math.toDegrees(radHeading));
-//            telemetry.addData("radHeading", radHeading);
-//            telemetry.addData("driveValues", Arrays.toString(driveValues));
-//            telemetry.addData("Actual Value0", Arrays.toString(currentMotorPositions));
-//            telemetry.update();
-//
-//        }
     }
+
+
 
     public boolean moveByDistance(double inchesForward, double inchesLateral,
                                   double rotationAngleGyroOriented, ArrayList<DcMotor> motors,
-                                  String selectedDriveType){
+                                  String selectedDriveType,
+                                  boolean stopOnRollLimit){
         //  For this method, forward travel is relative to robot heading of heading 0 (gyro initialize position)
         //  For rotationAngleGyroOriented, positive spin is towards left, negative spin is towards right
         //  Units for rotationAngleGyroOriented is Radians
@@ -788,7 +855,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         boolean driveStepOvershootDetected = false;
 
         if(selectedDriveType.equalsIgnoreCase("Custom")) {
-            PerformDriveStepCustomEncoderControl customDriveStep = new PerformDriveStepCustomEncoderControl(motors, encoderClicksPerRevolution, spinBoostFactor, driveAngle, expectedTravelTime, spinPower, drivePower, requiredSpinDistance, driveValues, encoderTargetValues).invoke();
+            PerformDriveStepCustomEncoderControl customDriveStep = new PerformDriveStepCustomEncoderControl(motors, spinBoostFactor, driveAngle, expectedTravelTime, spinPower, drivePower, requiredSpinDistance, driveValues, encoderTargetValues).invoke();
             driveStepPositionReached = customDriveStep.isDriveStepPositionReached();
             driveStepTimedOut = customDriveStep.isDriveStepTimedOut();
             driveStepOvershootDetected = customDriveStep.isDriveStepOvershootDetected();
@@ -806,7 +873,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
             if (rotationAngleGyroOriented<0) spinPower*=-1;
             double extraTimeForAcceleration = 0.25;
             expectedTravelTime = (travelDistance)/(peakRobotSpeed*drivePower) + extraTimeForAcceleration;
-            performDriveStepTimedTranslateAndSpin(motors,driveAngle,expectedTravelTime,spinPower,drivePower,driveValues, targetHeading);
+            performDriveStepTimedTranslateAndSpin(motors,driveAngle,expectedTravelTime,spinPower,drivePower,driveValues, targetHeading, stopOnRollLimit);
 
         }else if(selectedDriveType.equalsIgnoreCase("Debug")){
             //Don't perform any drive step
@@ -1039,21 +1106,20 @@ public abstract class eBotsOpMode extends LinearOpMode {
             goldPosition = GoldPosition.RIGHT;
         } else {goldPosition = GoldPosition.UNKNOWN;}
 
+        String goldLocationMethod = "";
         //If position was determined, set the boolean flag
-        if (goldPosition != GoldPosition.UNKNOWN) goldPositionDetermined = true;
+        if (goldPosition != GoldPosition.UNKNOWN) {
+            goldPositionDetermined = true;
+            goldLocationMethod = "Determined";
+        }
 
         //if gold location is not determined, then randomly assign a location
         if(!goldPositionDetermined){
-            double randomNumber = Math.random();
-            if(randomNumber <= 0.33){
-                goldPosition = GoldPosition.LEFT;
-            } else if (randomNumber <=0.67){
-                goldPosition = GoldPosition.CENTER;
-            } else{
-                goldPosition = GoldPosition.RIGHT;
-            }
+            goldPosition = selectRandomGoldPosition();
+            goldLocationMethod = "Randomly selected";
         }
         //Report out the final position
+        telemetry.addData("Determination Method", goldLocationMethod);
         telemetry.addData("Gold Position", goldPosition.toString());
         telemetry.update();
 
@@ -1064,6 +1130,167 @@ public abstract class eBotsOpMode extends LinearOpMode {
         return goldPosition;
     }
 
+    public GoldPosition selectRandomGoldPosition(){
+        double randomNumber = Math.random();
+        GoldPosition goldPosition;
+        if(randomNumber <= 0.33){
+            goldPosition = GoldPosition.LEFT;
+        } else if (randomNumber <=0.67){
+            goldPosition = GoldPosition.CENTER;
+        } else{
+            goldPosition = GoldPosition.RIGHT;
+        }
+        return goldPosition;
+    }
+
+    public File initializeDriveStepLogFile() {
+        //This check verifies that storage permissions are granted
+        File newFile = null;
+        if (isExternalStorageWritable()) {
+            Log.d("Helper", "Yes, it is writable");
+
+//            if (isStoragePermissionGranted()) {
+//                Log.d("Helper", "Looking good now for permissions");
+//            } else {
+//                Log.d("Helper", "Still got a problem with permissions");
+//
+//            }
+
+            //Generate a filename using timestamp
+            Timestamp timeStamp = new Timestamp(System.currentTimeMillis());
+            Log.d("Helper", sdf.format(timeStamp));
+            String fileName = sdf.format(timeStamp);
+            newFile = getPublicFileStorageDir(fileName);
+        } else {
+            Log.d("Helper", "No, not writable");
+        }
+
+        //Note:  this may return null
+        return newFile;
+    }
+
+    public void writeFileHeader(File newFile, String headerText){
+
+        try{
+            writeToFile(headerText, newFile);
+
+        } catch (IOException e){
+            Log.d ("BTI_Helper", "Error writing driveStep");
+            Log.d("BTI_Helper", e.getMessage());
+        }
+    }
+
+
+    public void writeDriveStepClicksToFile(File newFile, ArrayList<String> driveSteps,
+                                           boolean skipMotorInit){
+
+        try{
+            DriveStep driveStep = new DriveStep(skipMotorInit);
+            writeToFile(driveStep.toString(), newFile);
+            driveSteps.add(driveStep.toString());
+
+        } catch (IOException e){
+            Log.d ("Helper", "Error writing driveStep");
+            Log.d("Helper", e.getMessage());
+        }
+    }
+
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
+
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+    public File getPublicFileStorageDir(String fileName) {
+        // Get the directory for the user's public pictures directory.
+
+        File directory = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOCUMENTS),"");
+        Log.d("Helper", directory.getPath());
+        if (!directory.exists()) {
+            directory.mkdirs();
+        }
+        if (!directory.mkdirs()) {
+            Log.e("Helper", "Directory not created");
+        }
+
+        File writeFile = new File(directory.getAbsolutePath() + "/" + fileName);
+        return writeFile;
+    }
+
+
+
+    public String readFileContents(String fileName) {
+        String readLine="";
+        try {
+            File myDir = new File(Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOCUMENTS),"");
+            BufferedReader br = new BufferedReader(new FileReader(myDir + "/"+fileName));
+            readLine = br.readLine();
+
+            // Set TextView text here using tv.setText(s);
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return readLine;
+    }
+
+    public void getDriveStepInstructions(String fileName, ArrayList<String> driveStepInstructions) {
+        try {
+
+            File myDir = new File(Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOCUMENTS),"");
+            BufferedReader br = new BufferedReader(new FileReader(myDir + "/"+fileName));
+            String line = "";
+            while ((line = br.readLine()) != null) {
+                driveStepInstructions.add(line);
+            }
+
+            // Set TextView text here using tv.setText(s);
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+
+
+    public void zeroDriveMotorEncoders(ArrayList<DcMotor> motors) {
+        for (DcMotor m:motors){
+            m.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            m.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        }
+    }
+    public void writeToFile( String textLine, File file ) throws IOException {
+        FileWriter write = new FileWriter( file.getAbsolutePath(), true);
+        PrintWriter printLine = new PrintWriter( write );
+        printLine.printf("%s" + "%n" , textLine);
+        printLine.close();
+    }
+
+    public void parseMotorEncoderTargets(String inputLine, int[] motorEncoderTargets){
+        String[] splitText = inputLine.split(",", 4);
+        for(int i=0; i<splitText.length; i++){
+            int stringLength = splitText[i].length();
+            String firstCharacter = splitText[i].substring(0,1);
+            String lastCharacter = splitText[i].substring(stringLength-1,stringLength);
+
+            if(firstCharacter.equals("[")) splitText[i] = splitText[i].substring(1,stringLength);
+            if (lastCharacter.equals("]")) splitText[i] = splitText[i].substring(0,stringLength-1);
+            motorEncoderTargets[i] = Integer.parseInt(splitText[i].trim());
+        }
+    }
 
     public class TensorFlowRefactor {
         private boolean goldRelativePositionDetermined;
@@ -1150,17 +1377,50 @@ public abstract class eBotsOpMode extends LinearOpMode {
                 telemetry.addData("Item Count before purge", updatedRecognitions.size());
                 if(updatedRecognitions.size()>3) {
                     Recognition currentRecognition;
-                    int bottomThirdYLimit = 480;
+                    int imageSize = 720;
+                    int bottomThirdYLimit = (int) (imageSize * .667);
                     for (Iterator<Recognition> iterator = updatedRecognitions.iterator(); iterator.hasNext(); ) {
                         currentRecognition = iterator.next();
-                        if (currentRecognition.getBottom() < 480) {
+                        if (currentRecognition.getBottom() < bottomThirdYLimit) {
                             iterator.remove();
                         }
                     }
+                    telemetry.addData("Item Count after purge1", updatedRecognitions.size());
+                    telemetry.update();
                 }
-                telemetry.addData("Item Count after purge", updatedRecognitions.size());
 
-                telemetry.update();
+                if(updatedRecognitions.size()>3) {
+                    Recognition currentRecognition;
+                    int imageSize = 720;
+                    int bottomForthYLimit = (int) (imageSize * .75);
+                    for (Iterator<Recognition> iterator = updatedRecognitions.iterator(); iterator.hasNext(); ) {
+                        currentRecognition = iterator.next();
+                        if (currentRecognition.getBottom() < bottomForthYLimit) {
+                            iterator.remove();
+                        }
+                    }
+                    telemetry.addData("Item Count after top 75% Removed", updatedRecognitions.size());
+                    telemetry.update();
+
+                }
+
+                if(updatedRecognitions.size()>3) {
+                    Recognition currentRecognition;
+                    int imageSize = 720;
+                    int bottom15PercentYLimit = (int) (imageSize * .85);
+                    for (Iterator<Recognition> iterator = updatedRecognitions.iterator(); iterator.hasNext(); ) {
+                        currentRecognition = iterator.next();
+                        if (currentRecognition.getBottom() < bottom15PercentYLimit) {
+                            iterator.remove();
+                        }
+                    }
+                    telemetry.addData("Item Count after top 85% Removed", updatedRecognitions.size());
+                    telemetry.update();
+
+                }
+
+
+
                 //If at least 1 sampling item is visible, but not 4
                 //Assign location X location of each mineral
                 //IF 3 visible, assign relative position
@@ -1273,9 +1533,9 @@ public abstract class eBotsOpMode extends LinearOpMode {
         private boolean driveStepTimedOut;
         private boolean driveStepOvershootDetected;
 
-        public PerformDriveStepCustomEncoderControl(ArrayList<DcMotor> motors, int encoderClicksPerRevolution, double spinBoostFactor, double driveAngle, double expectedTravelTime, double spinPower, double drivePower, double requiredSpinDistance, double[] driveValues, int[] encoderTargetValues) {
+        public PerformDriveStepCustomEncoderControl(ArrayList<DcMotor> motors, double spinBoostFactor, double driveAngle, double expectedTravelTime, double spinPower, double drivePower, double requiredSpinDistance, double[] driveValues, int[] encoderTargetValues) {
             this.motors = motors;
-            this.encoderClicksPerRevolution = encoderClicksPerRevolution;
+            this.encoderClicksPerRevolution = NEVEREST_40_CPR;
             this.spinBoostFactor = spinBoostFactor;
             this.driveAngle = driveAngle;
             this.expectedTravelTime = expectedTravelTime;
@@ -1329,11 +1589,11 @@ public abstract class eBotsOpMode extends LinearOpMode {
 
             //prior to scaling the drive vectors based to create soft beginning and end
             //Scale the drive vector so the max value is equal to maxDrive
-            //  Might also need to But also stretch the lower end.  For instance, if something is 0.25, it should be at 25% of the range
+            //  Might also need to stretch the lower end.  For instance, if something is 0.25, it should be at 25% of the range
             //  between minDrive and maxDrive
 
             double maxDrive = 1;  //Motor performance doesn't increase past this point
-            double minDrive = 0.10;  //Stall condition
+            double minDrive = 0.25;  //Stall condition
             //Now capture the max drive value from the array
             double maxValue = findMaxAbsValue(driveValues);
 
@@ -1440,12 +1700,12 @@ public abstract class eBotsOpMode extends LinearOpMode {
             return this;
         }
 
-        private void zeroDriveMotorEncoders(ArrayList<DcMotor> motors) {
-            for (DcMotor m:motors){
-                m.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                m.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            }
-        }
+//        private void zeroDriveMotorEncoders(ArrayList<DcMotor> motors) {
+//            for (DcMotor m:motors){
+//                m.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+//                m.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+//            }
+//        }
 
         private void getMotorIdsForTwoHighestMotors(int[] encoderTargetValues, int[] returnMotorIds){
             int primaryMotor = 0;
@@ -1492,6 +1752,95 @@ public abstract class eBotsOpMode extends LinearOpMode {
             }
 
             return clicksFromTarget;
+        }
+    }
+
+    public class DriveStep{
+
+        private int flEncoderCounts;
+        private int frEncoderCounts;
+        private int blEncoderCounts;
+        private int brEncoderCounts;
+
+        ArrayList<Integer> encoderArray = new ArrayList<>();
+
+
+        public DriveStep(){
+            this(false);
+        }
+        public DriveStep(boolean isRandom){
+            if(isRandom) {
+                this.flEncoderCounts = getRandomEncoderValue();
+                this.frEncoderCounts = getRandomEncoderValue();
+                this.blEncoderCounts = getRandomEncoderValue();
+                this.brEncoderCounts = getRandomEncoderValue();
+                encoderArray.add(flEncoderCounts);
+                encoderArray.add(frEncoderCounts);
+                encoderArray.add(blEncoderCounts);
+                encoderArray.add(brEncoderCounts);
+            }else{
+                this.flEncoderCounts=frontLeft.getCurrentPosition();
+                this.frEncoderCounts=frontRight.getCurrentPosition();
+                this.blEncoderCounts =backLeft.getCurrentPosition();
+                this.brEncoderCounts= backRight.getCurrentPosition();
+                encoderArray.add(flEncoderCounts);
+                encoderArray.add(frEncoderCounts);
+                encoderArray.add(blEncoderCounts);
+                encoderArray.add(brEncoderCounts);
+            }
+        }
+        //*************************************
+        //The getters
+
+        public int getFlEncoderCounts() {
+            return flEncoderCounts;
+        }
+
+        public int getFrEncoderCounts() {
+            return frEncoderCounts;
+        }
+
+        public int getBlEncoderCounts() {
+            return blEncoderCounts;
+        }
+
+        public int getBrEncoderCounts() {
+            return brEncoderCounts;
+        }
+
+        //*************************************
+        //The setters
+        public void setFlEncoderCounts(int flEncoderCounts) {
+            this.flEncoderCounts = flEncoderCounts;
+        }
+
+        public void setBlEncoderCounts(int blEncoderCounts) {
+            this.blEncoderCounts = blEncoderCounts;
+        }
+
+        public void setFrEncoderCounts(int frEncoderCounts) {
+            this.frEncoderCounts = frEncoderCounts;
+        }
+
+        public void setBrEncoderCounts(int brEncoderCounts) {
+            this.brEncoderCounts = brEncoderCounts;
+        }
+
+
+        @Override
+        public String toString(){
+            String returnString = "[";
+            for(int i=0; i<encoderArray.size();i++){
+                returnString = returnString + Integer.toString(encoderArray.get(i));
+                if (i != encoderArray.size()-1) returnString = returnString + ", ";
+            }
+            returnString+= "]";
+            return returnString;
+        }
+
+
+        private int getRandomEncoderValue(){
+            return (int) (Math.random()*2000);
         }
     }
 }

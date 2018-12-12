@@ -11,6 +11,9 @@ import java.util.ArrayList;
 @Autonomous
 public class Auton_Depot extends eBotsOpMode {
 
+    private boolean noRollConsideration = false;
+    private boolean yesRollConsideration = true;
+
     private void executeDepotLeftAuton(ArrayList<DcMotor> motorList){
         //Overview
         /*push away*/                           double [] sampleLeftMove0 = new double[] {0, -3, 0};
@@ -31,7 +34,7 @@ public class Auton_Depot extends eBotsOpMode {
 
 
         //Push off
-        moveByDistance(sampleLeftMove0[0],sampleLeftMove0[1],sampleLeftMove0[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleLeftMove0[0],sampleLeftMove0[1],sampleLeftMove0[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         moveArmtoTravelPosition();
         extendArm();
@@ -39,7 +42,7 @@ public class Auton_Depot extends eBotsOpMode {
         turnToFieldHeading(sampleLeftTurn0, motorList);
 
         //Move in front of Sample
-        moveByDistance(sampleLeftMove1[0],sampleLeftMove1[1],sampleLeftMove1[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleLeftMove1[0],sampleLeftMove1[1],sampleLeftMove1[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         //MOVE ARM TO DUMP MARKER
         moveArmToDumpPosition();
@@ -48,13 +51,13 @@ public class Auton_Depot extends eBotsOpMode {
         lowerLatchToDrivePosition();
 
         //Push sample to depot
-        moveByDistance(sampleLeftMove2[0],sampleLeftMove2[1],sampleLeftMove2[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleLeftMove2[0],sampleLeftMove2[1],sampleLeftMove2[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         //Turn to align with wall
         turnToFieldHeading(sampleLeftTurn1, motorList);
 
         //move back and towards wall little
-        moveByDistance(sampleLeftMove3[0],sampleLeftMove3[1],sampleLeftMove3[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleLeftMove3[0],sampleLeftMove3[1],sampleLeftMove3[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         //wait for claiming
         depositMarkerInDepot(motorList);
@@ -66,14 +69,14 @@ public class Auton_Depot extends eBotsOpMode {
         turnToFieldHeading(sampleLeftTurn2, motorList);
 
         //push against wall
-        moveByDistance(sampleLeftMove4[0],sampleLeftMove4[1],sampleLeftMove4[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleLeftMove4[0],sampleLeftMove4[1],sampleLeftMove4[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         //straighten for drive
         turnToFieldHeading(sampleLeftTurn3, motorList);  //overspin away from the wall
         turnToFieldHeading(sampleLeftTurn4, motorList);  //now align for the drive
 
         //drive to crater
-        moveByDistance(sampleLeftMove5[0],sampleLeftMove5[1],sampleLeftMove5[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleLeftMove5[0],sampleLeftMove5[1],sampleLeftMove5[2],motorList,"TimedTranslateAndSpin",yesRollConsideration);
 
         waitForArmsToMove();
 
@@ -98,7 +101,7 @@ public class Auton_Depot extends eBotsOpMode {
         //--------------------------------------------
 
         //Move to Sample
-        moveByDistance(sampleCenterMove0[0],sampleCenterMove0[1],sampleCenterMove0[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleCenterMove0[0],sampleCenterMove0[1],sampleCenterMove0[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         moveArmtoTravelPosition();
         extendArm();
@@ -107,7 +110,7 @@ public class Auton_Depot extends eBotsOpMode {
         turnToFieldHeading(sampleCenterTurn0,motorList);
 
         //Move to Sample
-        moveByDistance(sampleCenterMove1[0],sampleCenterMove1[1],sampleCenterMove1[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleCenterMove1[0],sampleCenterMove1[1],sampleCenterMove1[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         //MOVE ARM TO DUMP MARKER
         moveArmToDumpPosition();
@@ -120,25 +123,25 @@ public class Auton_Depot extends eBotsOpMode {
         lowerLatchToDrivePosition();
 
         //Push to Depot
-        moveByDistance(sampleCenterMove2[0],sampleCenterMove2[1],sampleCenterMove2[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleCenterMove2[0],sampleCenterMove2[1],sampleCenterMove2[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
 
         //move back a little
-        moveByDistance(sampleCenterMove3[0],sampleCenterMove3[1],sampleCenterMove3[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleCenterMove3[0],sampleCenterMove3[1],sampleCenterMove3[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
 
         //turn towards crater
         turnToFieldHeading(sampleCenterTurn1, motorList);
 
         //align with wall
-        moveByDistance(sampleCenterMove4[0],sampleCenterMove4[1],sampleCenterMove4[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleCenterMove4[0],sampleCenterMove4[1],sampleCenterMove4[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         //straighten for drive
         turnToFieldHeading(sampleCenterTurn3, motorList);  //overspin away from the wall
         turnToFieldHeading(sampleCenterTurn4, motorList);  //now align for the drive
 
         //drive to crater
-        moveByDistance(sampleCenterMove5[0],sampleCenterMove5[1],sampleCenterMove5[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleCenterMove5[0],sampleCenterMove5[1],sampleCenterMove5[2],motorList,"TimedTranslateAndSpin", yesRollConsideration);
 
         waitForArmsToMove();
 
@@ -166,7 +169,7 @@ public class Auton_Depot extends eBotsOpMode {
 
         //------------------------------------------------------
         //push away
-        moveByDistance(sampleRightMove0[0],sampleRightMove0[1],sampleRightMove0[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleRightMove0[0],sampleRightMove0[1],sampleRightMove0[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         moveArmtoTravelPosition();
         extendArm();
@@ -174,20 +177,20 @@ public class Auton_Depot extends eBotsOpMode {
         turnToFieldHeading(sampleRightTurn0,motorList);
 
         //Move to Sample
-        moveByDistance(sampleRightMove1[0],sampleRightMove1[1],sampleRightMove1[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleRightMove1[0],sampleRightMove1[1],sampleRightMove1[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
 
         //Lower the latch
         lowerLatchToDrivePosition();
 
         //Push to Depot
-        moveByDistance(sampleRightMove2[0],sampleRightMove2[1],sampleRightMove2[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleRightMove2[0],sampleRightMove2[1],sampleRightMove2[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         //Align for turn back
         turnToFieldHeading(sampleRightTurn1, motorList);
 
         //move back a little
-        moveByDistance(sampleRightMove3[0],sampleRightMove3[1],sampleRightMove3[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleRightMove3[0],sampleRightMove3[1],sampleRightMove3[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         //MOVE ARM TO DUMP MARKER
         moveArmToDumpPosition();
@@ -205,14 +208,14 @@ public class Auton_Depot extends eBotsOpMode {
         turnToFieldHeading(sampleRightTurn2, motorList);
 
         //align with wall
-        moveByDistance(sampleRightMove4[0],sampleRightMove4[1],sampleRightMove4[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleRightMove4[0],sampleRightMove4[1],sampleRightMove4[2],motorList,"TimedTranslateAndSpin", noRollConsideration);
 
         //straighten for drive
         turnToFieldHeading(sampleRightTurn3, motorList);  //overspin away from the wall
         turnToFieldHeading(sampleRightTurn4, motorList);  //now align for the drive
 
         //drive to crater
-        moveByDistance(sampleRightMove5[0],sampleRightMove5[1],sampleRightMove5[2],motorList,"TimedTranslateAndSpin");
+        moveByDistance(sampleRightMove5[0],sampleRightMove5[1],sampleRightMove5[2],motorList,"TimedTranslateAndSpin", yesRollConsideration);
 
         waitForArmsToMove();
 
