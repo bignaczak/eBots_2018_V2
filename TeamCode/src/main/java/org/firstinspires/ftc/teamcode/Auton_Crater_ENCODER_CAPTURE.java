@@ -46,7 +46,7 @@ public class Auton_Crater_ENCODER_CAPTURE extends eBotsOpMode {
         /*push away*/                           double [] sampleLeftMove0 = new double[] {0, -3, 0};
         //Extend arm & move to travel position
         /*turn to face crater*/                 double sampleLeftTurn0 = -90;
-        /*move in front of sample*/             double [] sampleLeftMove1 = new double[] {34, -22, 0};
+        /*move in front of sample*/             double [] sampleLeftMove1 = new double[] {34, -20, 0};
         //Lower latch
         /*Simple sample move*/                  double [] sampleLeftMove2 = new double[] {0, -2, 0};  //simple sample move
         /*move back a little*/                  double [] sampleLeftMove3 = new double[] {0,4,0};  //pull it back
@@ -146,20 +146,20 @@ public class Auton_Crater_ENCODER_CAPTURE extends eBotsOpMode {
         /*push away*/                           double [] sampleCenterMove0 = new double[] {0, -3, 0};
         //Extend arm & move to travel position
         /*turn to face crater*/                 double sampleCenterTurn0 = -90;
-        /*sample*/                              double [] sampleCenterMove1 = new double[] {0, -22, 0};
+        /*sample*/                              double [] sampleCenterMove1 = new double[] {0, -18, 0};
         //Lower latch
-        /*move back a little*/                  double [] sampleCenterMove2 = new double[] {0,7,0};  //pull it back
+        /*move back a little*/                  double [] sampleCenterMove2 = new double[] {0,3,0};  //pull it back
         /*move left to prepare for depot drive*/double [] sampleCenterMove3 = new double[] {30,0,0};
         /*turn to align with wall*/             double sampleCenterTurn1 = 45;
         /*Snug up to wall*/                     double [] sampleCenterMove4 = new double[] {8,-8,0};
         /*turn for crater drive (overturn)*/    double sampleCenterTurn2 = 55;
         /*turn for crater drive (slight angle)*/double sampleCenterTurn3 = 47;
         //Move arm to dump position
-        /*Drive to Depot*/                      double [] sampleCenterMove5 = new double[] {15,15,0};  //Drive to Depot
+        /*Drive to Depot*/                      double [] sampleCenterMove5 = new double[] {11,11,0};  //Drive to Depot
         //Deposit marker and claim depot
         //Extend arm & move to armAngle to travel position
 
-        /*drive to crater*/                     double [] sampleCenterMove6 = new double[] {-27,-27,0};
+        /*drive to crater*/                     double [] sampleCenterMove6 = new double[] {-25,-25,0};
         //Note:  facing the wrong way
         //---------------------------------------
 

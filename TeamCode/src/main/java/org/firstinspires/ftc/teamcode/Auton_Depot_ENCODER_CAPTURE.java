@@ -134,8 +134,9 @@ public class Auton_Depot_ENCODER_CAPTURE extends eBotsOpMode {
         /*turn to align with wall*/             double sampleCenterTurn1 = 45;
         /*Align with wall*/                     double [] sampleCenterMove4 = new double[] {6,-6,0};//Align to wall
         /*straighten for drive (Overturn)*/     double sampleCenterTurn3 = 55;
-        /*straighten for drive slight angle*/   double sampleCenterTurn4 =47;
-        /*drive to crater*/                     double [] sampleCenterMove5 = new double[] {52,52,0};
+        /*straighten for drive slight angle*/   double sampleCenterTurn4 =45;
+        /*drive to crater*/                     double [] sampleCenterMove5 = new double[] {30,30,0};
+        /*drive to crater*/                     double [] sampleCenterMove5_2 = new double[] {12,12,0};
 
         //--------------------------------------------
         zeroDriveMotorEncoders(motorList);
@@ -197,6 +198,12 @@ public class Auton_Depot_ENCODER_CAPTURE extends eBotsOpMode {
 
         //drive to crater
         moveByDistance(sampleCenterMove5[0],sampleCenterMove5[1],sampleCenterMove5[2],motorList,"TimedTranslateAndSpin", yesRollConsideration);
+        writeDriveStepClicksToFile(file, driveSteps,skipMotorInit);
+        zeroDriveMotorEncoders(motorList);
+
+        turnToFieldHeading(sampleCenterTurn4, motorList);  //now align for the drive
+
+        moveByDistance(sampleCenterMove5_2[0],sampleCenterMove5_2[1],sampleCenterMove5_2[2],motorList,"TimedTranslateAndSpin", yesRollConsideration);
         writeDriveStepClicksToFile(file, driveSteps,skipMotorInit);
         zeroDriveMotorEncoders(motorList);
 

@@ -85,7 +85,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
     final static int ARM_EXTENSION_TRAVEL_POSITIION = -27800;
     final static int ARM_EXTENSION_DUMP_POSITION = -27600;
 
-    final static int LATCH_DEPLOY_POSITION = -12500;        //-13800 is competition position, -12500 for eBots lander (shorter)
+    final static int LATCH_DEPLOY_POSITION = -13800;        //-13800 is competition position, -12500 for eBots lander (shorter)
     //13500 is a little high for our practice lander
     final static int LATCH_DRIVE_POSITION = -5900;          //5900 is good, could be a little higher
     final static int LATCH_ENGAGE_POSITION = -11000;
@@ -611,6 +611,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         int targetPositionAccuracy = 50;
         boolean driveStepPositionReached = false;
         boolean rollLimitReached = false;
+        int rollLimitValue = 5;
 
         while(opModeIsActive() && (currentTime < endTime) && !rollLimitReached){
             calculateFieldOrientedDriveVector(driveAngle,radHeading,drivePower,spinPower,driveValues);
@@ -634,7 +635,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
             getRadHeading();
             getMotorPositions(currentMotorPositions, motors);
             getCurrentHeading();
-            if(stopOnRollLimit && Math.abs(currentRollDegrees)>7.5){
+            if(stopOnRollLimit && Math.abs(currentRollDegrees)>rollLimitValue){
                 rollLimitReached = true;
             }
             telemetry.addData("drivePower", drivePower);
