@@ -15,7 +15,7 @@ import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
 import java.util.ArrayList;
 import java.util.List;
 
-//@Disabled
+@Disabled
 @Autonomous
 public class Auton_Depot_DEBUG extends eBotsOpMode {
 

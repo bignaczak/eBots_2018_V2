@@ -599,7 +599,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         long transientFence = 500;  //accelerate and decelerate within this time window
         getRadHeading();
         double maxScale = 0.9;   //was 0.65
-        if(driveTime<1) maxScale=0.65;  //If a delicate maneuveur, go slow
+        if(driveTime<1) maxScale=0.55;  //If a delicate maneuveur, go slow
         double driveScaleFactor=1;
         long currentTime=(System.nanoTime()/1000000);
         long startTime = currentTime;
@@ -611,7 +611,7 @@ public abstract class eBotsOpMode extends LinearOpMode {
         int targetPositionAccuracy = 50;
         boolean driveStepPositionReached = false;
         boolean rollLimitReached = false;
-        int rollLimitValue = 5;
+        int rollLimitValue = 3;
 
         while(opModeIsActive() && (currentTime < endTime) && !rollLimitReached){
             calculateFieldOrientedDriveVector(driveAngle,radHeading,drivePower,spinPower,driveValues);
